@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Configuration de la police Inter */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=100..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -106,62 +106,53 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, query, addDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // CHANGÉ: Utilisation d'une version de SDK potentiellement plus stable pour l'environnement HTML autonome (v9.1.0)
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
 
         // --- Configuration Firebase et Initialisation ---
         
-        // IMPORTANT : Ces variables sont fournies par l'environnement Canvas.
-        // Si vous exécutez le code sur GitHub (sans cet environnement),
-        // vous DEVEZ décommenter et RENSEIGNER les lignes ci-dessous
-        // avec votre propre configuration Firebase.
+        // ATTENTION : Le code utilise MAINTENANT la configuration fournie ci-dessous
+        // pour assurer le fonctionnement sur GitHub.
 
-        const YOUR_FIREBASE_CONFIG = {
+        const firebaseConfig = {
             apiKey: "AIzaSyCNEj3jUaCupK5Web4TRnabpPld338b8Z8",
             authDomain: "record-jager.firebaseapp.com",
             projectId: "record-jager",
             storageBucket: "record-jager.firebasestorage.app",
             messagingSenderId: "41135986307",
-            appId: "1:41135986307:web:3d24ec3c82ae92f7d6edb6",
-            measurementId: "G-2Q34LM6RET" // Ce champ est optionnel pour Firestore/Auth
+            appId: "1:41135986307:web:3d24ec3c82ae92f7d6edb6"
         };
-        const YOUR_APP_ID = "record-jager"; // Utiliser le projectId comme identifiant pour la collection publique
-        const YOUR_AUTH_TOKEN = null; // Laissez null pour utiliser signInAnonymously
+
+        const appId = "record-jager"; // Le projectId est utilisé comme identifiant d'application
+        const initialAuthToken = null; // Nous utilisons l'authentification anonyme
 
         let db;
         let auth;
         let userId = null;
 
-        // Tente d'utiliser les variables de l'environnement, sinon utilise les constantes définies.
-        const appId = typeof __app_id !== 'undefined' ? __app_id : (typeof YOUR_APP_ID !== 'undefined' ? YOUR_APP_ID : 'default-app-id');
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : (typeof YOUR_FIREBASE_CONFIG !== 'undefined' ? YOUR_FIREBASE_CONFIG : null);
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : (typeof YOUR_AUTH_TOKEN !== 'undefined' ? YOUR_AUTH_TOKEN : null);
-
-
-        if (!firebaseConfig) {
-            console.error("Firebase config is missing.");
-            document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur: Configuration Firebase manquante. Voir console pour les instructions GitHub.</p>';
+        if (!firebaseConfig.apiKey) {
+            console.error("Firebase config is incomplete.");
+            document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur: Configuration Firebase incomplète.</p>';
         } else {
             const app = initializeApp(firebaseConfig);
-            db = getFirestore(app);
-            auth = getAuth(app);
-            console.log("Firebase Initialized.");
+            db = getFirestore(app); // Initialisation de Firestore
+            auth = getAuth(app); // Initialisation d'Auth
+            
+            console.log("Firebase Initialized. Project ID:", firebaseConfig.projectId);
             
             // Tentative d'authentification
             const initializeAuth = async () => {
                 try {
-                    if (initialAuthToken) {
-                        await signInWithCustomToken(auth, initialAuthToken);
-                        console.log("Signed in with custom token.");
-                    } else {
-                        // Firebase Auth gère la persistance de la session anonyme automatiquement.
-                        await signInAnonymously(auth);
-                        console.log("Signed in anonymously.");
-                    }
+                    // L'authentification anonyme est utilisée ici
+                    await signInAnonymously(auth);
+                    console.log("Signed in anonymously.");
                 } catch (error) {
+                    // Capture de l'erreur auth/configuration-not-found
                     console.error("Authentication error:", error);
-                    document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur d\'authentification. Vérifiez les logs.</p>';
+                    // Message d'erreur plus explicite pour l'utilisateur
+                    document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur d\'authentification. Avez-vous activé le service Anonyme dans votre console Firebase ?</p>';
                     return;
                 }
 
