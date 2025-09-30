@@ -86,9 +86,13 @@
                             +5 Jägerbombs
                         </button>
                     </div>
-                    <!-- Bouton de réinitialisation -->
+                    <!-- Bouton de réinitialisation personnelle -->
                     <button id="reset-count-btn" class="mt-4 w-full sm:w-1/2 mx-auto bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition duration-150 border border-gray-600">
                         Réinitialiser mon Compteur (0)
+                    </button>
+                    <!-- Bouton de réinitialisation globale -->
+                    <button id="reset-all-btn" class="mt-2 w-full sm:w-1/2 mx-auto bg-red-900 hover:bg-red-800 text-white font-bold py-2 rounded-lg transition duration-150 border border-red-700 hidden">
+                        ADMIN: Réinitialiser TOUS les Compteurs
                     </button>
                 </div>
             </div>
@@ -109,13 +113,10 @@
         // CHANGÉ: Utilisation d'une version de SDK potentiellement plus stable pour l'environnement HTML autonome (v9.1.0)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection, query } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
 
         // --- Configuration Firebase et Initialisation ---
         
-        // ATTENTION : Le code utilise MAINTENANT la configuration fournie ci-dessous
-        // pour assurer le fonctionnement sur GitHub.
-
         const firebaseConfig = {
             apiKey: "AIzaSyCNEj3jUaCupK5Web4TRnabpPld338b8Z8",
             authDomain: "record-jager.firebaseapp.com",
@@ -125,8 +126,11 @@
             appId: "1:41135986307:web:3d24ec3c82ae92f7d6edb6"
         };
 
-        const appId = "record-jager"; // Le projectId est utilisé comme identifiant d'application
-        const initialAuthToken = null; // Nous utilisons l'authentification anonyme
+        const appId = "record-jager"; 
+        const initialAuthToken = null; 
+
+        // 🚨 REMPLACEZ 'VOTRE_PROPRE_USER_ID_ADMIN' par votre ID utilisateur réel pour débloquer le bouton ADMIN.
+        const ADMIN_USER_ID = 'VOTRE_PROPRE_USER_ID_ADMIN'; 
 
         let db;
         let auth;
@@ -137,21 +141,17 @@
             document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur: Configuration Firebase incomplète.</p>';
         } else {
             const app = initializeApp(firebaseConfig);
-            db = getFirestore(app); // Initialisation de Firestore
-            auth = getAuth(app); // Initialisation d'Auth
+            db = getFirestore(app); 
+            auth = getAuth(app); 
             
             console.log("Firebase Initialized. Project ID:", firebaseConfig.projectId);
             
-            // Tentative d'authentification
             const initializeAuth = async () => {
                 try {
-                    // L'authentification anonyme est utilisée ici
                     await signInAnonymously(auth);
                     console.log("Signed in anonymously.");
                 } catch (error) {
-                    // Capture de l'erreur auth/configuration-not-found
                     console.error("Authentication error:", error);
-                    // Message d'erreur plus explicite pour l'utilisateur
                     document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur d\'authentification. Avez-vous activé le service Anonyme dans votre console Firebase ?</p>';
                     return;
                 }
@@ -163,10 +163,15 @@
                         document.getElementById('user-id-display').textContent = `ID Utilisateur: ${userId}`;
                         document.getElementById('app-container').classList.remove('opacity-0');
                         document.getElementById('loading-indicator').classList.add('hidden');
+
+                        // Affiche le bouton Admin si l'utilisateur est l'administrateur
+                        if (userId === ADMIN_USER_ID) {
+                            document.getElementById('reset-all-btn').classList.remove('hidden');
+                        }
+
                         startRealtimeListener(userId);
                     } else {
                         console.log("User is signed out.");
-                        // Fallback user ID if auth fails
                         userId = crypto.randomUUID();
                     }
                 });
@@ -177,14 +182,13 @@
 
         // --- Références Firestore ---
 
-        // Collection publique pour le classement et le compteur global
         const COLLECTION_PATH = `/artifacts/${appId}/public/data/jagerbombs`;
         const userRef = (uid) => doc(db, COLLECTION_PATH, uid);
         const collectionRef = collection(db, COLLECTION_PATH);
 
         // --- Variables d'État Locales ---
         let personalCount = 0;
-        let userPseudo = 'Moi'; // Pseudo par défaut
+        let userPseudo = 'Moi'; 
 
         // --- FONCTIONS DE CACHE LOCAL (localStorage) ---
         const LOCAL_PSEUDO_KEY = 'jagerbomb_pseudo';
@@ -200,14 +204,12 @@
             localStorage.setItem(LOCAL_PSEUDO_KEY, pseudo);
         }
         
-        // Chargement du pseudo depuis le cache avant le démarrage de l'auth/firestore
         loadPseudoFromCache();
         
         // --- Fonctions de Mise à Jour de l'UI ---
 
         const updatePersonalUI = () => {
             document.getElementById('personal-counter').textContent = personalCount;
-            // Charge la valeur du cache ou la valeur Firebase dans l'input
             document.getElementById('pseudo-input').value = userPseudo;
             document.getElementById('my-pseudo-display').textContent = userPseudo;
         };
@@ -218,14 +220,13 @@
 
         const renderLeaderboard = (data) => {
             const leaderboardList = document.getElementById('leaderboard-list');
-            leaderboardList.innerHTML = ''; // Nettoyer la liste
+            leaderboardList.innerHTML = ''; 
 
             if (data.length === 0) {
                 leaderboardList.innerHTML = '<p class="text-gray-500">Aucun buveur enregistré pour l\'instant. Soyez le premier !</p>';
                 return;
             }
 
-            // Trier par le nombre de Jägerbombs (décroissant)
             const sortedData = data.sort((a, b) => b.count - a.count).slice(0, 10);
 
             sortedData.forEach((user, index) => {
@@ -271,16 +272,12 @@
                     }
                 });
 
-                // Mise à jour de l'état local et des compteurs
                 if (currentUserData) {
                     personalCount = currentUserData.count || 0;
-                    // Le pseudo de Firestore est la vérité, on le met à jour
                     userPseudo = currentUserData.pseudo || 'Moi'; 
                 }
 
-                // Initialisation si l'utilisateur n'existe pas encore dans la base
                 if (!currentUserData && currentUserId) {
-                    // On utilise le pseudo du cache s'il existe pour l'initialisation
                     initializeUserDocument(currentUserId, userPseudo); 
                 }
 
@@ -296,7 +293,6 @@
             });
         };
 
-        // Crée un document initial pour l'utilisateur
         const initializeUserDocument = async (uid, defaultPseudo) => {
             const initialData = {
                 pseudo: defaultPseudo,
@@ -311,8 +307,6 @@
             }
         };
 
-
-        // Met à jour le compteur personnel dans Firestore
         const updateCount = async (increment) => {
             if (!userId) {
                 console.error("Utilisateur non authentifié.");
@@ -325,36 +319,30 @@
                 lastUpdated: new Date()
             };
 
-            // On utilise setDoc pour créer ou mettre à jour le document de l'utilisateur
             try {
-                // On met à jour le pseudo s'il a été modifié dans l'input
                 if (document.getElementById('pseudo-input').value !== userPseudo) {
                     const newPseudo = document.getElementById('pseudo-input').value.trim() || 'Anonyme';
                     dataToUpdate.pseudo = newPseudo;
-                    userPseudo = newPseudo; // Mise à jour de l'état local
-                    savePseudoToCache(userPseudo); // Sauvegarde locale du nouveau pseudo
+                    userPseudo = newPseudo; 
+                    savePseudoToCache(userPseudo); 
                 } else {
                     dataToUpdate.pseudo = userPseudo;
                 }
 
-                // Empêcher le compteur de devenir négatif
                 if (dataToUpdate.count < 0) {
                      dataToUpdate.count = 0;
                 }
                 
-                // Optimisation: On met à jour l'UI localement immédiatement pour une meilleure réactivité
                 personalCount = dataToUpdate.count;
                 updatePersonalUI();
 
                 await setDoc(userRef(userId), dataToUpdate, { merge: true });
-                // Le listener onSnapshot mettra à jour l'UI global et le classement après la confirmation de Firestore
                 console.log(`Compteur mis à jour: ${increment > 0 ? '+' : ''}${increment}`);
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du compteur:", e);
             }
         };
 
-        // Réinitialise le compteur personnel à zéro
         const resetCount = async () => {
             if (!userId) {
                 console.error("Utilisateur non authentifié.");
@@ -362,15 +350,65 @@
             }
 
             try {
-                // Définir le compteur à 0. Le pseudo et le reste restent inchangés.
                 await setDoc(userRef(userId), { count: 0, lastUpdated: new Date() }, { merge: true });
                 console.log("Compteur personnel réinitialisé à 0.");
             } catch (e) {
                 console.error("Erreur lors de la réinitialisation du compteur:", e);
             }
         };
+        
+        // FONCTION ADMIN : BAN ET RÉINITIALISATION GLOBALE
+        const resetAllCounts = async () => {
+            if (userId !== ADMIN_USER_ID) {
+                alert("Erreur: Vous n'avez pas les droits d'administrateur pour cette opération.");
+                console.error("Tentative d'accès non autorisé à la fonction admin.");
+                return;
+            }
 
-        // Met à jour le pseudo seulement
+            if (!confirm("ATTENTION: Êtes-vous sûr de vouloir réinitialiser TOUS les compteurs ? Cette action est IRREVERSIBLE.")) {
+                 return;
+            }
+            
+            // Affichage d'un message non-bloquant
+            document.getElementById('loading-indicator').classList.remove('hidden');
+            document.getElementById('loading-indicator').querySelector('p').textContent = 'Réinitialisation globale en cours...';
+
+            console.warn("ADMIN: Tentative de réinitialisation globale de TOUS les compteurs.");
+            
+            try {
+                const snapshot = await getDocs(collectionRef);
+                let errorCount = 0;
+                let successCount = 0;
+
+                for (const docSnapshot of snapshot.docs) {
+                    try {
+                        // L'admin a besoin d'une permission spéciale DANS LES RÈGLES FIREBASE pour pouvoir écrire sur TOUS les documents.
+                        // Sans une Cloud Function ou des règles très permissives, cette ligne échouera pour les autres utilisateurs.
+                        await setDoc(doc(db, COLLECTION_PATH, docSnapshot.id), { 
+                            count: 0, 
+                            lastUpdated: new Date() 
+                        }, { merge: true });
+                        successCount++;
+                    } catch (e) {
+                        // Si le document est le vôtre, cela réussira. Si ce n'est pas le cas, cela échouera avec une erreur de permission
+                        // car les règles actuelles ne le permettent pas (sauf si vous les changez temporairement comme indiqué ci-dessous).
+                        console.error(`ADMIN ÉCHEC : Erreur de permission pour réinitialiser le document ${docSnapshot.id}:`, e.message);
+                        errorCount++;
+                    }
+                }
+
+                document.getElementById('loading-indicator').classList.add('hidden');
+                alert(`ADMIN: Réinitialisation terminée : ${successCount} réussites, ${errorCount} échecs. (Note: Les échecs sont attendus si vous n'avez pas modifié temporairement les règles Firestore en mode Admin)`);
+                
+            } catch (e) {
+                document.getElementById('loading-indicator').classList.add('hidden');
+                console.error("Erreur critique lors de la réinitialisation globale:", e);
+                alert("Erreur critique lors de la réinitialisation globale. Voir console.");
+            }
+        };
+        // FIN FONCTION DE RÉINITIALISATION GLOBALE
+
+
         const updatePseudo = async () => {
             if (!userId) {
                 console.error("Utilisateur non authentifié.");
@@ -387,10 +425,9 @@
             try {
                 await setDoc(userRef(userId), { pseudo: newPseudo, lastUpdated: new Date() }, { merge: true });
                 
-                // Mettre à jour l'état local et le cache pour une meilleure UX
                 userPseudo = newPseudo;
-                savePseudoToCache(newPseudo); // Sauvegarde locale du nouveau pseudo
-                updatePersonalUI(); // Mise à jour immédiate
+                savePseudoToCache(newPseudo); 
+                updatePersonalUI(); 
                 
                 console.log(`Pseudo mis à jour à: ${newPseudo}`);
             } catch (e) {
@@ -410,8 +447,9 @@
 
         document.getElementById('save-pseudo-btn').addEventListener('click', updatePseudo);
         
-        // Nouvel écouteur pour le bouton de réinitialisation
         document.getElementById('reset-count-btn').addEventListener('click', resetCount);
+
+        document.getElementById('reset-all-btn').addEventListener('click', resetAllCounts);
 
 
     </script>
