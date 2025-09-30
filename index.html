@@ -45,7 +45,8 @@
         </header>
         
         <!-- Bouton d'accès à la page Admin (uniquement visible par l'admin) -->
-        <button id="admin-link-btn" class="fixed bottom-4 right-4 bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-xl z-40 border border-gray-700 hidden" onclick="showAdminPage(true)">
+        <!-- Suppression du onclick: l'écouteur est ajouté en JS -->
+        <button id="admin-link-btn" class="fixed bottom-4 right-4 bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-xl z-40 border border-gray-700 hidden">
             Page Admin
         </button>
         
@@ -128,7 +129,8 @@
 
         <!-- Page d'Administration -->
         <div id="admin-page" class="hidden">
-            <button class="mb-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150" onclick="showAdminPage(false)">
+            <!-- Ajout d'un ID et suppression du onclick: l'écouteur est ajouté en JS -->
+            <button id="back-to-tracker-btn" class="mb-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150">
                 ← Retour au Tracker
             </button>
             
@@ -346,6 +348,7 @@
                 btn.addEventListener('click', (e) => {
                     const targetUserId = e.target.getAttribute('data-user-id');
                     const pseudo = data.find(u => u.userId === targetUserId)?.pseudo || 'cet utilisateur';
+                    // NOTE: Utilisation d'alert/confirm pour les interfaces simples
                     if (confirm(`Êtes-vous sûr de vouloir bannir ${pseudo} (ID: ${targetUserId}) ? Cette action est IRREVERSIBLE et supprime son compteur.`)) {
                          banUser(targetUserId);
                     }
@@ -532,6 +535,7 @@
                 return;
             }
 
+            // NOTE: Utilisation d'alert/confirm pour les interfaces simples
             if (!confirm("ATTENTION: Êtes-vous sûr de vouloir réinitialiser TOUS les compteurs ? Cette action est IRREVERSIBLE.")) {
                  return;
             }
@@ -601,9 +605,18 @@
         // Événement pour le bouton "Rejoindre la Soirée" après un banissement
         document.getElementById('rejoin-btn').addEventListener('click', rejoin);
 
-        // Événement sur la page admin
+        // Événement sur la page admin (Réinitialisation globale)
         if (document.getElementById('reset-all-btn')) {
             document.getElementById('reset-all-btn').addEventListener('click', resetAllCounts);
+        }
+
+        // NOUVEAU: Écouteurs pour la navigation Admin
+        // Cela résout le problème du 'onclick' qui ne fonctionne pas avec les modules ES sur mobile/Canvas.
+        document.getElementById('admin-link-btn').addEventListener('click', () => showAdminPage(true));
+        // Ajout d'une vérification car le bouton de retour est sur la page cachée
+        const backButton = document.getElementById('back-to-tracker-btn');
+        if (backButton) {
+            backButton.addEventListener('click', () => showAdminPage(false));
         }
 
     </script>
