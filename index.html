@@ -298,9 +298,14 @@
                     dataToUpdate.pseudo = userPseudo;
                 }
 
+                // Empêcher le compteur de devenir négatif si on ajoute des boutons de décrémentation plus tard
+                if (dataToUpdate.count < 0) {
+                     dataToUpdate.count = 0;
+                }
+
                 await setDoc(userRef(userId), dataToUpdate, { merge: true });
                 // Le listener onSnapshot mettra à jour l'UI après la confirmation de Firestore
-                console.log(`Compteur mis à jour: +${increment}`);
+                console.log(`Compteur mis à jour: ${increment > 0 ? '+' : ''}${increment}`);
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du compteur:", e);
             }
