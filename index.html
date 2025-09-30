@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jägerbomb Tracker 🔥</title>
+    <title>Record Jägerbomb 🔥</title>
     <!-- Chargement de Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -14,10 +14,10 @@
         }
         /* Styles spécifiques pour l'ambiance */
         .glass-card {
-            background-color: rgba(255, 255, 255, 0.05);
+            background-color: rgba(0, 0, 0, 0.2); /* Fond très sombre */
             backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(134, 239, 172, 0.1); /* Bordure vert subtile */
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
         }
         .pulse-effect {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
@@ -31,34 +31,33 @@
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
 
     <div id="loading-indicator" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-red-500"></div>
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-orange-500"></div>
         <p class="ml-4 text-xl">Connexion aux serveurs de Jäger...</p>
     </div>
 
     <!-- Conteneur principal de l'application -->
     <div id="app-container" class="max-w-6xl mx-auto opacity-0 transition-opacity duration-500">
         <header class="text-center mb-10">
-            <h1 class="text-5xl font-extrabold text-red-500 tracking-tight mb-2">
-                Jägerbomb Tracker 🔥
+            <h1 class="text-6xl font-extrabold text-green-400 tracking-wider mb-1 drop-shadow-lg">
+                RECORD JÄGERBOMB 🔥
             </h1>
-            <p class="text-gray-400 text-lg">Compteur en temps réel de la soirée.</p>
+            <p class="text-xl font-semibold text-orange-400">by NoisyNeighbors</p>
         </header>
         
         <!-- Bouton d'accès à la page Admin (uniquement visible par l'admin) -->
-        <!-- Suppression du onclick: l'écouteur est ajouté en JS -->
-        <button id="admin-link-btn" class="fixed bottom-4 right-4 bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-xl z-40 border border-gray-700 hidden">
-            Page Admin
+        <button id="admin-link-btn" class="fixed bottom-4 right-4 bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-full shadow-2xl shadow-red-700/50 z-40 border border-red-600 hidden">
+            <span class="font-black">ADMIN</span>
         </button>
         
         <!-- Page Principale (Compteurs et Classement) -->
         <div id="main-page">
             
             <!-- Message en cas de Bannissement -->
-            <div id="banned-message" class="hidden glass-card p-8 rounded-xl text-center mb-10">
-                <h2 class="text-4xl font-bold text-red-600 mb-4">Vous avez été retiré(e) de la soirée.</h2>
+            <div id="banned-message" class="hidden glass-card p-8 rounded-xl text-center mb-10 border-red-600">
+                <h2 class="text-4xl font-bold text-red-600 mb-4">VOUS ÊTES HORS JEU.</h2>
                 <p class="text-gray-300 text-lg mb-6">Votre document a été supprimé du classement par l'administrateur.</p>
-                <button id="rejoin-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150 shadow-lg">
-                    Rejoindre la Soirée (Commencer à 0)
+                <button id="rejoin-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150 shadow-lg shadow-green-600/50">
+                    REJOINDRE LA SOIRÉE (0)
                 </button>
             </div>
             
@@ -66,22 +65,22 @@
                 <!-- Section du Compteur Global et du Pseudo -->
                 <div class="grid md:grid-cols-3 gap-6 mb-10">
                     <!-- Compteur Global -->
-                    <div class="md:col-span-2 glass-card p-6 rounded-xl text-center">
-                        <p class="text-xl font-semibold text-red-400 mb-2">Compteur Mondial Total</p>
+                    <div class="md:col-span-2 glass-card p-8 rounded-xl text-center">
+                        <p class="text-2xl font-semibold text-green-400 mb-4">GLOBAL JÄGER COUNT</p>
                         <div class="flex items-center justify-center">
-                            <span id="global-counter" class="text-7xl font-black text-red-500 pulse-effect transition-all duration-300">0</span>
-                            <span class="ml-4 text-3xl text-red-300">Jägerbombs</span>
+                            <span id="global-counter" class="text-8xl font-black text-orange-500 pulse-effect transition-all duration-300 drop-shadow-xl">0</span>
+                            <span class="ml-4 text-4xl text-orange-300">BOMBS</span>
                         </div>
                     </div>
 
                     <!-- Pseudo Utilisateur -->
                     <div class="glass-card p-6 rounded-xl flex flex-col justify-center space-y-4">
-                        <p class="text-lg font-semibold text-gray-300">Mon Pseudo :</p>
-                        <input type="text" id="pseudo-input" placeholder="Entrez votre nom de buveur..."
-                            class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:ring-red-500 focus:border-red-500 transition duration-150">
+                        <p class="text-lg font-semibold text-gray-300 border-b border-gray-700 pb-2">MON IDENTITÉ :</p>
+                        <input type="text" id="pseudo-input" placeholder="Pseudo de légende..."
+                            class="w-full p-3 rounded-lg bg-gray-800 text-white border border-green-700 focus:ring-green-500 focus:border-green-500 transition duration-150 shadow-inner">
                         <button id="save-pseudo-btn"
-                                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition duration-150 shadow-lg shadow-red-500/50">
-                            Enregistrer le Pseudo
+                                class="w-full bg-green-600 hover:bg-green-700 text-white font-black py-2 rounded-lg transition duration-150 shadow-xl shadow-green-600/50 uppercase">
+                            Changer de pseudo
                         </button>
                         <p id="user-id-display" class="text-xs text-gray-500 break-all mt-2">ID Utilisateur : Chargement...</p>
                     </div>
@@ -91,31 +90,33 @@
                 <div class="grid md:grid-cols-2 gap-6 mb-10">
                     <!-- Compteur Personnel -->
                     <div class="glass-card p-6 rounded-xl text-center flex flex-col justify-between">
-                        <p class="text-xl font-semibold text-gray-300 mb-4">Mon Compteur Personnel (<span id="my-pseudo-display">...</span>)</p>
-                        <p id="personal-counter" class="text-6xl font-black text-red-400 mb-6 transition-all duration-300">0</p>
+                        <p class="text-2xl font-semibold text-orange-400 mb-4 border-b border-gray-700 pb-2">
+                            MON RECORD (<span id="my-pseudo-display" class="text-green-400">...</span>)
+                        </p>
+                        <p id="personal-counter" class="text-7xl font-black text-green-400 mb-6 transition-all duration-300">0</p>
                         <div class="flex flex-col gap-4 justify-center">
                             <div class="grid grid-cols-3 gap-3 justify-center">
-                                <!-- Nouveau bouton de décrémentation -->
-                                <button data-increment="-1" class="increment-btn action-button bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-lg transition duration-150 border border-gray-700">
-                                    -1 Jägerbomb
+                                <!-- Boutons d'action -->
+                                <button data-increment="-1" class="increment-btn action-button bg-gray-700 hover:bg-gray-600 text-white font-bold py-4 rounded-lg transition duration-150 border border-gray-600 text-2xl shadow-lg">
+                                    -1
                                 </button>
-                                <button data-increment="1" class="increment-btn action-button bg-red-700 hover:bg-red-800 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-700/50">
-                                    +1 Jägerbomb
+                                <button data-increment="1" class="increment-btn action-button bg-orange-700 hover:bg-orange-600 text-white font-black py-4 rounded-lg transition duration-150 shadow-2xl shadow-orange-700/50 text-2xl">
+                                    +1
                                 </button>
-                                <button data-increment="5" class="increment-btn action-button bg-red-900 hover:bg-red-950 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-900/50">
-                                    +5 Jägerbombs
+                                <button data-increment="5" class="increment-btn action-button bg-red-700 hover:bg-red-600 text-white font-black py-4 rounded-lg transition duration-150 shadow-2xl shadow-red-700/50 text-2xl">
+                                    +5
                                 </button>
                             </div>
                             <!-- Bouton de réinitialisation personnelle -->
-                            <button id="reset-count-btn" class="mt-4 w-full sm:w-1/2 mx-auto bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition duration-150 border border-gray-600">
-                                Réinitialiser mon Compteur (0)
+                            <button id="reset-count-btn" class="mt-4 w-full sm:w-1/2 mx-auto bg-gray-800 hover:bg-gray-700 text-gray-400 font-bold py-2 rounded-lg transition duration-150 border border-gray-700 text-sm">
+                                Réinitialiser ma session (0)
                             </button>
                         </div>
                     </div>
 
                     <!-- Classement (Leaderboard) -->
                     <div class="glass-card p-6 rounded-xl">
-                        <h2 class="text-2xl font-bold text-red-500 mb-4 border-b border-gray-700 pb-2">Classement des Buveurs (Top 10)</h2>
+                        <h2 class="text-2xl font-black text-orange-400 mb-4 border-b border-gray-700 pb-2">CLASSEMENT TOP 10</h2>
                         <div id="leaderboard-list" class="space-y-3">
                             <!-- Les éléments du classement seront injectés ici par JS -->
                             <p class="text-gray-500">Chargement du classement...</p>
@@ -293,7 +294,7 @@
             sortedData.forEach((user, index) => {
                 const isCurrentUser = user.userId === userId;
                 const item = document.createElement('div');
-                item.className = `flex justify-between items-center p-3 rounded-lg ${isCurrentUser ? 'bg-red-900 border border-red-500 shadow-xl' : 'bg-gray-800'}`;
+                item.className = `flex justify-between items-center p-3 rounded-lg ${isCurrentUser ? 'bg-green-900 border border-green-500 shadow-xl' : 'bg-gray-800'}`;
 
                 let rankIcon = '';
                 if (index === 0) rankIcon = '🥇';
@@ -303,10 +304,10 @@
 
                 item.innerHTML = `
                     <div class="flex items-center">
-                        <span class="text-2xl font-bold w-8 text-center">${rankIcon}</span>
-                        <span class="ml-3 text-lg font-medium ${isCurrentUser ? 'text-white' : 'text-gray-200'}">${user.pseudo || 'Anonyme'} ${isCurrentUser ? '(VOUS)' : ''}</span>
+                        <span class="text-2xl font-black w-8 text-center text-orange-400">${rankIcon}</span>
+                        <span class="ml-3 text-lg font-medium ${isCurrentUser ? 'text-white font-bold' : 'text-gray-200'}">${user.pseudo || 'Anonyme'} ${isCurrentUser ? '(VOUS)' : ''}</span>
                     </div>
-                    <span class="text-2xl font-extrabold text-red-400">${user.count}</span>
+                    <span class="text-2xl font-extrabold text-orange-400">${user.count}</span>
                 `;
                 leaderboardList.appendChild(item);
             });
@@ -318,7 +319,7 @@
             adminUserList.innerHTML = '';
 
             const header = document.createElement('div');
-            header.className = 'flex justify-between items-center p-3 font-semibold text-red-400 border-b border-gray-700';
+            header.className = 'flex justify-between items-center p-3 font-semibold text-orange-400 border-b border-gray-700';
             header.innerHTML = '<span class="w-1/2">Pseudo / ID</span><span class="w-1/4 text-center">Jägerbombs</span><span class="w-1/4 text-right">Action</span>';
             adminUserList.appendChild(header);
 
@@ -331,10 +332,10 @@
                         <span class="text-lg font-medium text-gray-200">${user.pseudo || 'Anonyme'} ${user.userId === userId ? '(VOUS)' : ''}</span>
                         <span class="text-xs text-gray-500 break-all">${user.userId}</span>
                     </div>
-                    <span class="w-1/4 text-center text-xl font-bold text-red-400">${user.count}</span>
+                    <span class="w-1/4 text-center text-xl font-bold text-green-400">${user.count}</span>
                     <div class="w-1/4 text-right">
                         ${user.userId !== userId ? 
-                            `<button data-user-id="${user.userId}" class="ban-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded transition duration-150">
+                            `<button data-user-id="${user.userId}" class="ban-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded transition duration-150 shadow-md shadow-red-600/50">
                                 Bannir (Supprimer)
                             </button>` 
                         : ''}
