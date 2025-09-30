@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jägerbomb Tracker 🔥</title>
+    <!-- Chargement de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Configuration de la police Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Styles spécifiques pour l'ambiance */
+        .glass-card {
+            background-color: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .pulse-effect {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .75; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
+
+    <div id="loading-indicator" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-red-500"></div>
+        <p class="ml-4 text-xl">Connexion aux serveurs de Jäger...</p>
+    </div>
+
+    <div id="app-container" class="max-w-6xl mx-auto opacity-0 transition-opacity duration-500">
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-extrabold text-red-500 tracking-tight mb-2">
+                Jägerbomb Tracker 🔥
+            </h1>
+            <p class="text-gray-400 text-lg">Compteur en temps réel de la soirée.</p>
+        </header>
+
+        <!-- Section du Compteur Global et du Pseudo -->
+        <div class="grid md:grid-cols-3 gap-6 mb-10">
+            <!-- Compteur Global -->
+            <div class="md:col-span-2 glass-card p-6 rounded-xl text-center">
+                <p class="text-xl font-semibold text-red-400 mb-2">Compteur Mondial Total</p>
+                <div class="flex items-center justify-center">
+                    <span id="global-counter" class="text-7xl font-black text-red-500 pulse-effect transition-all duration-300">0</span>
+                    <span class="ml-4 text-3xl text-red-300">Jägerbombs</span>
+                </div>
+            </div>
+
+            <!-- Pseudo Utilisateur -->
+            <div class="glass-card p-6 rounded-xl flex flex-col justify-center space-y-4">
+                <p class="text-lg font-semibold text-gray-300">Mon Pseudo :</p>
+                <input type="text" id="pseudo-input" placeholder="Entrez votre nom de buveur..."
+                       class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:ring-red-500 focus:border-red-500 transition duration-150">
+                <button id="save-pseudo-btn"
+                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition duration-150 shadow-lg shadow-red-500/50">
+                    Enregistrer le Pseudo
+                </button>
+                <p id="user-id-display" class="text-xs text-gray-500 break-all mt-2">ID Utilisateur : Chargement...</p>
+            </div>
+        </div>
+
+        <!-- Compteur Personnel et Actions -->
+        <div class="grid md:grid-cols-2 gap-6 mb-10">
+            <!-- Compteur Personnel -->
+            <div class="glass-card p-6 rounded-xl text-center flex flex-col justify-between">
+                <p class="text-xl font-semibold text-gray-300 mb-4">Mon Compteur Personnel (<span id="my-pseudo-display">...</span>)</p>
+                <p id="personal-counter" class="text-6xl font-black text-red-400 mb-6 transition-all duration-300">0</p>
+                <div class="flex flex-col gap-4 justify-center">
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                        <button data-increment="1" class="increment-btn action-button bg-red-700 hover:bg-red-800 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-700/50">
+                            +1 Jägerbomb
+                        </button>
+                        <button data-increment="5" class="increment-btn action-button bg-red-900 hover:bg-red-950 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-900/50">
+                            +5 Jägerbombs
+                        </button>
+                    </div>
+                    <!-- Nouveau bouton de réinitialisation -->
+                    <button id="reset-count-btn" class="mt-4 w-full sm:w-1/2 mx-auto bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition duration-150 border border-gray-600">
+                        Réinitialiser mon Compteur (0)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Classement (Leaderboard) -->
+            <div class="glass-card p-6 rounded-xl">
+                <h2 class="text-2xl font-bold text-red-500 mb-4 border-b border-gray-700 pb-2">Classement des Buveurs (Top 10)</h2>
+                <div id="leaderboard-list" class="space-y-3">
+                    <!-- Les éléments du classement seront injectés ici par JS -->
+                    <p class="text-gray-500">Chargement du classement...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, query, addDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuration Firebase et Initialisation ---
+
+        let db;
+        let auth;
+        let userId = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        if (!firebaseConfig) {
+            console.error("Firebase config is missing.");
+            document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur: Configuration Firebase manquante.</p>';
+        } else {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            console.log("Firebase Initialized.");
+            
+            // Tentative d'authentification
+            const initializeAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                        console.log("Signed in with custom token.");
+                    } else {
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously.");
+                    }
+                } catch (error) {
+                    console.error("Authentication error:", error);
+                    document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur d\'authentification. Vérifiez les logs.</p>';
+                    return;
+                }
+
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        userId = user.uid;
+                        console.log("User ID:", userId);
+                        document.getElementById('user-id-display').textContent = `ID Utilisateur: ${userId}`;
+                        document.getElementById('app-container').classList.remove('opacity-0');
+                        document.getElementById('loading-indicator').classList.add('hidden');
+                        startRealtimeListener(userId);
+                    } else {
+                        console.log("User is signed out.");
+                        // Fallback user ID if auth fails
+                        userId = crypto.randomUUID();
+                    }
+                });
+            };
+
+            initializeAuth();
+        }
+
+        // --- Références Firestore ---
+
+        // Collection publique pour le classement et le compteur global
+        const COLLECTION_PATH = `/artifacts/${appId}/public/data/jagerbombs`;
+        const userRef = (uid) => doc(db, COLLECTION_PATH, uid);
+        const collectionRef = collection(db, COLLECTION_PATH);
+
+        // --- Variables d'État Locales ---
+        let personalCount = 0;
+        let userPseudo = 'Moi'; // Pseudo par défaut
+
+        // --- Fonctions de Mise à Jour de l'UI ---
+
+        const updatePersonalUI = () => {
+            document.getElementById('personal-counter').textContent = personalCount;
+            document.getElementById('pseudo-input').value = userPseudo;
+            document.getElementById('my-pseudo-display').textContent = userPseudo;
+        };
+
+        const updateGlobalUI = (total) => {
+            document.getElementById('global-counter').textContent = total;
+        };
+
+        const renderLeaderboard = (data) => {
+            const leaderboardList = document.getElementById('leaderboard-list');
+            leaderboardList.innerHTML = ''; // Nettoyer la liste
+
+            if (data.length === 0) {
+                leaderboardList.innerHTML = '<p class="text-gray-500">Aucun buveur enregistré pour l\'instant. Soyez le premier !</p>';
+                return;
+            }
+
+            // Trier par le nombre de Jägerbombs (décroissant)
+            const sortedData = data.sort((a, b) => b.count - a.count).slice(0, 10);
+
+            sortedData.forEach((user, index) => {
+                const isCurrentUser = user.userId === userId;
+                const item = document.createElement('div');
+                item.className = `flex justify-between items-center p-3 rounded-lg ${isCurrentUser ? 'bg-red-900 border border-red-500 shadow-xl' : 'bg-gray-800'}`;
+
+                let rankIcon = '';
+                if (index === 0) rankIcon = '🥇';
+                else if (index === 1) rankIcon = '🥈';
+                else if (index === 2) rankIcon = '🥉';
+                else rankIcon = `${index + 1}.`;
+
+                item.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="text-2xl font-bold w-8 text-center">${rankIcon}</span>
+                        <span class="ml-3 text-lg font-medium ${isCurrentUser ? 'text-white' : 'text-gray-200'}">${user.pseudo || 'Anonyme'} ${isCurrentUser ? '(VOUS)' : ''}</span>
+                    </div>
+                    <span class="text-2xl font-extrabold text-red-400">${user.count}</span>
+                `;
+                leaderboardList.appendChild(item);
+            });
+        };
+
+        // --- Logique Firestore ---
+
+        const startRealtimeListener = (currentUserId) => {
+            const q = query(collectionRef);
+
+            onSnapshot(q, (snapshot) => {
+                let totalCount = 0;
+                const leaderboardData = [];
+                let currentUserData = null;
+
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const count = data.count || 0;
+                    totalCount += count;
+                    leaderboardData.push({ ...data, userId: doc.id });
+
+                    if (doc.id === currentUserId) {
+                        currentUserData = data;
+                    }
+                });
+
+                // Mise à jour de l'état local et des compteurs
+                if (currentUserData) {
+                    personalCount = currentUserData.count || 0;
+                    userPseudo = currentUserData.pseudo || 'Moi';
+                }
+
+                // Initialisation si l'utilisateur n'existe pas encore dans la base
+                if (!currentUserData && currentUserId) {
+                    initializeUserDocument(currentUserId, userPseudo);
+                }
+
+                updatePersonalUI();
+                updateGlobalUI(totalCount);
+                renderLeaderboard(leaderboardData);
+
+                console.log(`Snapshot received. Global: ${totalCount}, Personal: ${personalCount}`);
+
+            }, (error) => {
+                console.error("Erreur de lecture en temps réel:", error);
+                document.getElementById('leaderboard-list').innerHTML = '<p class="text-red-500">Erreur de connexion en temps réel.</p>';
+            });
+        };
+
+        // Crée un document initial pour l'utilisateur
+        const initializeUserDocument = async (uid, defaultPseudo) => {
+            const initialData = {
+                pseudo: defaultPseudo,
+                count: 0,
+                lastUpdated: new Date()
+            };
+            try {
+                await setDoc(userRef(uid), initialData);
+                console.log("Document utilisateur initialisé.");
+            } catch (e) {
+                console.error("Erreur lors de l'initialisation du document:", e);
+            }
+        };
+
+
+        // Met à jour le compteur personnel dans Firestore
+        const updateCount = async (increment) => {
+            if (!userId) {
+                console.error("Utilisateur non authentifié.");
+                return;
+            }
+
+            const newCount = personalCount + increment;
+            const dataToUpdate = {
+                count: newCount,
+                lastUpdated: new Date()
+            };
+
+            // On utilise setDoc pour créer ou mettre à jour le document de l'utilisateur
+            try {
+                // On met à jour le pseudo s'il a été modifié localement et non encore sauvegardé
+                if (document.getElementById('pseudo-input').value !== userPseudo) {
+                    dataToUpdate.pseudo = document.getElementById('pseudo-input').value || 'Anonyme';
+                    userPseudo = dataToUpdate.pseudo; // Mise à jour de l'état local
+                } else {
+                    dataToUpdate.pseudo = userPseudo;
+                }
+
+                await setDoc(userRef(userId), dataToUpdate, { merge: true });
+                // Le listener onSnapshot mettra à jour l'UI après la confirmation de Firestore
+                console.log(`Compteur mis à jour: +${increment}`);
+            } catch (e) {
+                console.error("Erreur lors de la mise à jour du compteur:", e);
+            }
+        };
+
+        // Réinitialise le compteur personnel à zéro
+        const resetCount = async () => {
+            if (!userId) {
+                console.error("Utilisateur non authentifié.");
+                return;
+            }
+
+            try {
+                // Définir le compteur à 0. Le pseudo et le reste restent inchangés.
+                await setDoc(userRef(userId), { count: 0, lastUpdated: new Date() }, { merge: true });
+                console.log("Compteur personnel réinitialisé à 0.");
+            } catch (e) {
+                console.error("Erreur lors de la réinitialisation du compteur:", e);
+            }
+        };
+
+        // Met à jour le pseudo seulement
+        const updatePseudo = async () => {
+            if (!userId) {
+                console.error("Utilisateur non authentifié.");
+                return;
+            }
+
+            const newPseudo = document.getElementById('pseudo-input').value.trim() || 'Moi';
+
+            if (newPseudo === userPseudo) {
+                console.log("Pseudo inchangé.");
+                return;
+            }
+
+            try {
+                await setDoc(userRef(userId), { pseudo: newPseudo, lastUpdated: new Date() }, { merge: true });
+                // Le listener onSnapshot mettra à jour l'UI après la confirmation de Firestore
+                console.log(`Pseudo mis à jour à: ${newPseudo}`);
+            } catch (e) {
+                console.error("Erreur lors de la mise à jour du pseudo:", e);
+            }
+        };
+
+
+        // --- Événements UI ---
+
+        document.querySelectorAll('.increment-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                const incrementValue = parseInt(button.getAttribute('data-increment'));
+                updateCount(incrementValue);
+            });
+        });
+
+        document.getElementById('save-pseudo-btn').addEventListener('click', updatePseudo);
+        
+        // Nouvel écouteur pour le bouton de réinitialisation
+        document.getElementById('reset-count-btn').addEventListener('click', resetCount);
+
+
+    </script>
+
+</body>
+</html>
