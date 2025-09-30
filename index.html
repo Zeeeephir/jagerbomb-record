@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Configuration de la police Inter */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=100..900&display=swap');
         body {
             font-family: 'Inter', sans-serif;
         }
@@ -74,7 +74,11 @@
                 <p class="text-xl font-semibold text-gray-300 mb-4">Mon Compteur Personnel (<span id="my-pseudo-display">...</span>)</p>
                 <p id="personal-counter" class="text-6xl font-black text-red-400 mb-6 transition-all duration-300">0</p>
                 <div class="flex flex-col gap-4 justify-center">
-                    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                    <div class="grid grid-cols-3 gap-3 justify-center">
+                        <!-- Nouveau bouton de décrémentation -->
+                        <button data-increment="-1" class="increment-btn action-button bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-lg transition duration-150 border border-gray-700">
+                            -1 Jägerbomb
+                        </button>
                         <button data-increment="1" class="increment-btn action-button bg-red-700 hover:bg-red-800 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-700/50">
                             +1 Jägerbomb
                         </button>
@@ -82,7 +86,7 @@
                             +5 Jägerbombs
                         </button>
                     </div>
-                    <!-- Nouveau bouton de réinitialisation -->
+                    <!-- Bouton de réinitialisation -->
                     <button id="reset-count-btn" class="mt-4 w-full sm:w-1/2 mx-auto bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition duration-150 border border-gray-600">
                         Réinitialiser mon Compteur (0)
                     </button>
@@ -107,16 +111,37 @@
         import { getFirestore, doc, setDoc, onSnapshot, collection, query, addDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- Configuration Firebase et Initialisation ---
+        
+        // IMPORTANT : Ces variables sont fournies par l'environnement Canvas.
+        // Si vous exécutez le code sur GitHub (sans cet environnement),
+        // vous DEVEZ décommenter et RENSEIGNER les lignes ci-dessous
+        // avec votre propre configuration Firebase.
+
+        const YOUR_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCNEj3jUaCupK5Web4TRnabpPld338b8Z8",
+            authDomain: "record-jager.firebaseapp.com",
+            projectId: "record-jager",
+            storageBucket: "record-jager.firebasestorage.app",
+            messagingSenderId: "41135986307",
+            appId: "1:41135986307:web:3d24ec3c82ae92f7d6edb6",
+            measurementId: "G-2Q34LM6RET" // Ce champ est optionnel pour Firestore/Auth
+        };
+        const YOUR_APP_ID = "record-jager"; // Utiliser le projectId comme identifiant pour la collection publique
+        const YOUR_AUTH_TOKEN = null; // Laissez null pour utiliser signInAnonymously
 
         let db;
         let auth;
         let userId = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+
+        // Tente d'utiliser les variables de l'environnement, sinon utilise les constantes définies.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : (typeof YOUR_APP_ID !== 'undefined' ? YOUR_APP_ID : 'default-app-id');
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : (typeof YOUR_FIREBASE_CONFIG !== 'undefined' ? YOUR_FIREBASE_CONFIG : null);
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : (typeof YOUR_AUTH_TOKEN !== 'undefined' ? YOUR_AUTH_TOKEN : null);
+
 
         if (!firebaseConfig) {
             console.error("Firebase config is missing.");
-            document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur: Configuration Firebase manquante.</p>';
+            document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur: Configuration Firebase manquante. Voir console pour les instructions GitHub.</p>';
         } else {
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
@@ -126,10 +151,11 @@
             // Tentative d'authentification
             const initializeAuth = async () => {
                 try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
                         console.log("Signed in with custom token.");
                     } else {
+                        // Firebase Auth gère la persistance de la session anonyme automatiquement.
                         await signInAnonymously(auth);
                         console.log("Signed in anonymously.");
                     }
@@ -169,10 +195,28 @@
         let personalCount = 0;
         let userPseudo = 'Moi'; // Pseudo par défaut
 
+        // --- FONCTIONS DE CACHE LOCAL (localStorage) ---
+        const LOCAL_PSEUDO_KEY = 'jagerbomb_pseudo';
+
+        const loadPseudoFromCache = () => {
+            const cachedPseudo = localStorage.getItem(LOCAL_PSEUDO_KEY);
+            if (cachedPseudo) {
+                userPseudo = cachedPseudo;
+            }
+        }
+
+        const savePseudoToCache = (pseudo) => {
+            localStorage.setItem(LOCAL_PSEUDO_KEY, pseudo);
+        }
+        
+        // Chargement du pseudo depuis le cache avant le démarrage de l'auth/firestore
+        loadPseudoFromCache();
+        
         // --- Fonctions de Mise à Jour de l'UI ---
 
         const updatePersonalUI = () => {
             document.getElementById('personal-counter').textContent = personalCount;
+            // Charge la valeur du cache ou la valeur Firebase dans l'input
             document.getElementById('pseudo-input').value = userPseudo;
             document.getElementById('my-pseudo-display').textContent = userPseudo;
         };
@@ -239,12 +283,14 @@
                 // Mise à jour de l'état local et des compteurs
                 if (currentUserData) {
                     personalCount = currentUserData.count || 0;
-                    userPseudo = currentUserData.pseudo || 'Moi';
+                    // Le pseudo de Firestore est la vérité, on le met à jour
+                    userPseudo = currentUserData.pseudo || 'Moi'; 
                 }
 
                 // Initialisation si l'utilisateur n'existe pas encore dans la base
                 if (!currentUserData && currentUserId) {
-                    initializeUserDocument(currentUserId, userPseudo);
+                    // On utilise le pseudo du cache s'il existe pour l'initialisation
+                    initializeUserDocument(currentUserId, userPseudo); 
                 }
 
                 updatePersonalUI();
@@ -290,21 +336,27 @@
 
             // On utilise setDoc pour créer ou mettre à jour le document de l'utilisateur
             try {
-                // On met à jour le pseudo s'il a été modifié localement et non encore sauvegardé
+                // On met à jour le pseudo s'il a été modifié dans l'input
                 if (document.getElementById('pseudo-input').value !== userPseudo) {
-                    dataToUpdate.pseudo = document.getElementById('pseudo-input').value || 'Anonyme';
-                    userPseudo = dataToUpdate.pseudo; // Mise à jour de l'état local
+                    const newPseudo = document.getElementById('pseudo-input').value.trim() || 'Anonyme';
+                    dataToUpdate.pseudo = newPseudo;
+                    userPseudo = newPseudo; // Mise à jour de l'état local
+                    savePseudoToCache(userPseudo); // Sauvegarde locale du nouveau pseudo
                 } else {
                     dataToUpdate.pseudo = userPseudo;
                 }
 
-                // Empêcher le compteur de devenir négatif si on ajoute des boutons de décrémentation plus tard
+                // Empêcher le compteur de devenir négatif
                 if (dataToUpdate.count < 0) {
                      dataToUpdate.count = 0;
                 }
+                
+                // Optimisation: On met à jour l'UI localement immédiatement pour une meilleure réactivité
+                personalCount = dataToUpdate.count;
+                updatePersonalUI();
 
                 await setDoc(userRef(userId), dataToUpdate, { merge: true });
-                // Le listener onSnapshot mettra à jour l'UI après la confirmation de Firestore
+                // Le listener onSnapshot mettra à jour l'UI global et le classement après la confirmation de Firestore
                 console.log(`Compteur mis à jour: ${increment > 0 ? '+' : ''}${increment}`);
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du compteur:", e);
@@ -343,7 +395,12 @@
 
             try {
                 await setDoc(userRef(userId), { pseudo: newPseudo, lastUpdated: new Date() }, { merge: true });
-                // Le listener onSnapshot mettra à jour l'UI après la confirmation de Firestore
+                
+                // Mettre à jour l'état local et le cache pour une meilleure UX
+                userPseudo = newPseudo;
+                savePseudoToCache(newPseudo); // Sauvegarde locale du nouveau pseudo
+                updatePersonalUI(); // Mise à jour immédiate
+                
                 console.log(`Pseudo mis à jour à: ${newPseudo}`);
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du pseudo:", e);
