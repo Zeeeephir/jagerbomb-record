@@ -499,6 +499,32 @@
             }
         };
         
+        const updatePseudo = async () => {
+            if (!userId) {
+                console.error("Utilisateur non authentifié.");
+                return;
+            }
+
+            const newPseudo = document.getElementById('pseudo-input').value.trim() || 'Moi';
+
+            if (newPseudo === userPseudo) {
+                console.log("Pseudo inchangé.");
+                return;
+            }
+
+            try {
+                await setDoc(userRef(userId), { pseudo: newPseudo, lastUpdated: new Date() }, { merge: true });
+                
+                userPseudo = newPseudo;
+                savePseudoToCache(newPseudo); 
+                updateMainUI(); 
+                
+                console.log(`Pseudo mis à jour à: ${newPseudo}`);
+            } catch (e) {
+                console.error("Erreur lors de la mise à jour du pseudo:", e);
+            }
+        };
+
         // FONCTION ADMIN : RÉINITIALISATION GLOBALE (déjà présente)
         const resetAllCounts = async () => {
             if (userId !== ADMIN_USER_ID) {
