@@ -35,6 +35,7 @@
         <p class="ml-4 text-xl">Connexion aux serveurs de Jäger...</p>
     </div>
 
+    <!-- Conteneur principal de l'application -->
     <div id="app-container" class="max-w-6xl mx-auto opacity-0 transition-opacity duration-500">
         <header class="text-center mb-10">
             <h1 class="text-5xl font-extrabold text-red-500 tracking-tight mb-2">
@@ -42,70 +43,114 @@
             </h1>
             <p class="text-gray-400 text-lg">Compteur en temps réel de la soirée.</p>
         </header>
-
-        <!-- Section du Compteur Global et du Pseudo -->
-        <div class="grid md:grid-cols-3 gap-6 mb-10">
-            <!-- Compteur Global -->
-            <div class="md:col-span-2 glass-card p-6 rounded-xl text-center">
-                <p class="text-xl font-semibold text-red-400 mb-2">Compteur Mondial Total</p>
-                <div class="flex items-center justify-center">
-                    <span id="global-counter" class="text-7xl font-black text-red-500 pulse-effect transition-all duration-300">0</span>
-                    <span class="ml-4 text-3xl text-red-300">Jägerbombs</span>
-                </div>
-            </div>
-
-            <!-- Pseudo Utilisateur -->
-            <div class="glass-card p-6 rounded-xl flex flex-col justify-center space-y-4">
-                <p class="text-lg font-semibold text-gray-300">Mon Pseudo :</p>
-                <input type="text" id="pseudo-input" placeholder="Entrez votre nom de buveur..."
-                       class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:ring-red-500 focus:border-red-500 transition duration-150">
-                <button id="save-pseudo-btn"
-                        class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition duration-150 shadow-lg shadow-red-500/50">
-                    Enregistrer le Pseudo
+        
+        <!-- Bouton d'accès à la page Admin (uniquement visible par l'admin) -->
+        <button id="admin-link-btn" class="fixed bottom-4 right-4 bg-gray-800 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg shadow-xl z-40 border border-gray-700 hidden" onclick="showAdminPage(true)">
+            Page Admin
+        </button>
+        
+        <!-- Page Principale (Compteurs et Classement) -->
+        <div id="main-page">
+            
+            <!-- Message en cas de Bannissement -->
+            <div id="banned-message" class="hidden glass-card p-8 rounded-xl text-center mb-10">
+                <h2 class="text-4xl font-bold text-red-600 mb-4">Vous avez été retiré(e) de la soirée.</h2>
+                <p class="text-gray-300 text-lg mb-6">Votre document a été supprimé du classement par l'administrateur.</p>
+                <button id="rejoin-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-150 shadow-lg">
+                    Rejoindre la Soirée (Commencer à 0)
                 </button>
-                <p id="user-id-display" class="text-xs text-gray-500 break-all mt-2">ID Utilisateur : Chargement...</p>
             </div>
-        </div>
-
-        <!-- Compteur Personnel et Actions -->
-        <div class="grid md:grid-cols-2 gap-6 mb-10">
-            <!-- Compteur Personnel -->
-            <div class="glass-card p-6 rounded-xl text-center flex flex-col justify-between">
-                <p class="text-xl font-semibold text-gray-300 mb-4">Mon Compteur Personnel (<span id="my-pseudo-display">...</span>)</p>
-                <p id="personal-counter" class="text-6xl font-black text-red-400 mb-6 transition-all duration-300">0</p>
-                <div class="flex flex-col gap-4 justify-center">
-                    <div class="grid grid-cols-3 gap-3 justify-center">
-                        <!-- Nouveau bouton de décrémentation -->
-                        <button data-increment="-1" class="increment-btn action-button bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-lg transition duration-150 border border-gray-700">
-                            -1 Jägerbomb
-                        </button>
-                        <button data-increment="1" class="increment-btn action-button bg-red-700 hover:bg-red-800 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-700/50">
-                            +1 Jägerbomb
-                        </button>
-                        <button data-increment="5" class="increment-btn action-button bg-red-900 hover:bg-red-950 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-900/50">
-                            +5 Jägerbombs
-                        </button>
+            
+            <div id="tracker-content">
+                <!-- Section du Compteur Global et du Pseudo -->
+                <div class="grid md:grid-cols-3 gap-6 mb-10">
+                    <!-- Compteur Global -->
+                    <div class="md:col-span-2 glass-card p-6 rounded-xl text-center">
+                        <p class="text-xl font-semibold text-red-400 mb-2">Compteur Mondial Total</p>
+                        <div class="flex items-center justify-center">
+                            <span id="global-counter" class="text-7xl font-black text-red-500 pulse-effect transition-all duration-300">0</span>
+                            <span class="ml-4 text-3xl text-red-300">Jägerbombs</span>
+                        </div>
                     </div>
-                    <!-- Bouton de réinitialisation personnelle -->
-                    <button id="reset-count-btn" class="mt-4 w-full sm:w-1/2 mx-auto bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition duration-150 border border-gray-600">
-                        Réinitialiser mon Compteur (0)
-                    </button>
-                    <!-- Bouton de réinitialisation globale -->
-                    <button id="reset-all-btn" class="mt-2 w-full sm:w-1/2 mx-auto bg-red-900 hover:bg-red-800 text-white font-bold py-2 rounded-lg transition duration-150 border border-red-700 hidden">
-                        ADMIN: Réinitialiser TOUS les Compteurs
-                    </button>
-                </div>
-            </div>
 
-            <!-- Classement (Leaderboard) -->
+                    <!-- Pseudo Utilisateur -->
+                    <div class="glass-card p-6 rounded-xl flex flex-col justify-center space-y-4">
+                        <p class="text-lg font-semibold text-gray-300">Mon Pseudo :</p>
+                        <input type="text" id="pseudo-input" placeholder="Entrez votre nom de buveur..."
+                            class="w-full p-3 rounded-lg bg-gray-800 text-white border border-gray-700 focus:ring-red-500 focus:border-red-500 transition duration-150">
+                        <button id="save-pseudo-btn"
+                                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 rounded-lg transition duration-150 shadow-lg shadow-red-500/50">
+                            Enregistrer le Pseudo
+                        </button>
+                        <p id="user-id-display" class="text-xs text-gray-500 break-all mt-2">ID Utilisateur : Chargement...</p>
+                    </div>
+                </div>
+
+                <!-- Compteur Personnel et Actions -->
+                <div class="grid md:grid-cols-2 gap-6 mb-10">
+                    <!-- Compteur Personnel -->
+                    <div class="glass-card p-6 rounded-xl text-center flex flex-col justify-between">
+                        <p class="text-xl font-semibold text-gray-300 mb-4">Mon Compteur Personnel (<span id="my-pseudo-display">...</span>)</p>
+                        <p id="personal-counter" class="text-6xl font-black text-red-400 mb-6 transition-all duration-300">0</p>
+                        <div class="flex flex-col gap-4 justify-center">
+                            <div class="grid grid-cols-3 gap-3 justify-center">
+                                <!-- Nouveau bouton de décrémentation -->
+                                <button data-increment="-1" class="increment-btn action-button bg-gray-800 hover:bg-gray-700 text-white font-bold py-3 rounded-lg transition duration-150 border border-gray-700">
+                                    -1 Jägerbomb
+                                </button>
+                                <button data-increment="1" class="increment-btn action-button bg-red-700 hover:bg-red-800 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-700/50">
+                                    +1 Jägerbomb
+                                </button>
+                                <button data-increment="5" class="increment-btn action-button bg-red-900 hover:bg-red-950 text-white font-bold py-3 rounded-lg transition duration-150 shadow-xl shadow-red-900/50">
+                                    +5 Jägerbombs
+                                </button>
+                            </div>
+                            <!-- Bouton de réinitialisation personnelle -->
+                            <button id="reset-count-btn" class="mt-4 w-full sm:w-1/2 mx-auto bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded-lg transition duration-150 border border-gray-600">
+                                Réinitialiser mon Compteur (0)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Classement (Leaderboard) -->
+                    <div class="glass-card p-6 rounded-xl">
+                        <h2 class="text-2xl font-bold text-red-500 mb-4 border-b border-gray-700 pb-2">Classement des Buveurs (Top 10)</h2>
+                        <div id="leaderboard-list" class="space-y-3">
+                            <!-- Les éléments du classement seront injectés ici par JS -->
+                            <p class="text-gray-500">Chargement du classement...</p>
+                        </div>
+                    </div>
+                </div>
+            </div> <!-- Fin #tracker-content -->
+            
+        </div> <!-- Fin #main-page -->
+
+
+        <!-- Page d'Administration -->
+        <div id="admin-page" class="hidden">
+            <button class="mb-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150" onclick="showAdminPage(false)">
+                ← Retour au Tracker
+            </button>
+            
+            <div class="glass-card p-6 rounded-xl mb-6">
+                <h2 class="text-3xl font-bold text-red-500 mb-4 border-b border-gray-700 pb-2">Outils d'Administration</h2>
+                
+                <p class="text-lg text-gray-300 mb-4">Votre ID Admin: <span class="font-mono text-red-400 break-all">${ADMIN_USER_ID}</span></p>
+
+                <button id="reset-all-btn" class="bg-red-900 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg transition duration-150 border border-red-700">
+                    Réinitialiser TOUS les Compteurs
+                </button>
+                <p class="text-sm text-gray-500 mt-2">Nécessite une modification temporaire des règles Firestore pour fonctionner.</p>
+            </div>
+            
             <div class="glass-card p-6 rounded-xl">
-                <h2 class="text-2xl font-bold text-red-500 mb-4 border-b border-gray-700 pb-2">Classement des Buveurs (Top 10)</h2>
-                <div id="leaderboard-list" class="space-y-3">
-                    <!-- Les éléments du classement seront injectés ici par JS -->
-                    <p class="text-gray-500">Chargement du classement...</p>
+                <h2 class="text-2xl font-bold text-red-500 mb-4 border-b border-gray-700 pb-2">Gestion des Utilisateurs</h2>
+                <div id="admin-user-list" class="space-y-3">
+                    <p class="text-gray-500">Chargement de la liste...</p>
                 </div>
             </div>
-        </div>
+        </div> <!-- Fin #admin-page -->
+
     </div>
 
     <!-- Firebase SDKs -->
@@ -113,6 +158,7 @@
         // CHANGÉ: Utilisation d'une version de SDK potentiellement plus stable pour l'environnement HTML autonome (v9.1.0)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js";
+        // Importation de deleteDoc pour la fonction de bannissement
         import { getFirestore, doc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
 
         // --- Configuration Firebase et Initialisation ---
@@ -129,12 +175,13 @@
         const appId = "record-jager"; 
         const initialAuthToken = null; 
 
-        // 🚨 REMPLACEZ 'VOTRE_PROPRE_USER_ID_ADMIN' par votre ID utilisateur réel pour débloquer le bouton ADMIN.
+        // 🚨 Votre ID utilisateur Administrateur
         const ADMIN_USER_ID = 'iaLTcBjcrvgptjy5GQh7ZDYwe5U2'; 
 
         let db;
         let auth;
         let userId = null;
+        let isBanned = false; // Nouvel état pour gérer le message de bannissement
 
         if (!firebaseConfig.apiKey) {
             console.error("Firebase config is incomplete.");
@@ -164,9 +211,9 @@
                         document.getElementById('app-container').classList.remove('opacity-0');
                         document.getElementById('loading-indicator').classList.add('hidden');
 
-                        // Affiche le bouton Admin si l'utilisateur est l'administrateur
+                        // Affiche le bouton d'accès à la page Admin
                         if (userId === ADMIN_USER_ID) {
-                            document.getElementById('reset-all-btn').classList.remove('hidden');
+                            document.getElementById('admin-link-btn').classList.remove('hidden');
                         }
 
                         startRealtimeListener(userId);
@@ -208,11 +255,23 @@
         
         // --- Fonctions de Mise à Jour de l'UI ---
 
-        const updatePersonalUI = () => {
+        const updateMainUI = () => {
+             // Si l'utilisateur est banni (document supprimé)
+            if (isBanned) {
+                document.getElementById('banned-message').classList.remove('hidden');
+                document.getElementById('tracker-content').classList.add('hidden');
+                document.getElementById('admin-link-btn').classList.add('hidden'); // Cache le lien admin s'il est banni (même si admin)
+            } else {
+                document.getElementById('banned-message').classList.add('hidden');
+                document.getElementById('tracker-content').classList.remove('hidden');
+                if (userId === ADMIN_USER_ID) {
+                    document.getElementById('admin-link-btn').classList.remove('hidden');
+                }
+            }
             document.getElementById('personal-counter').textContent = personalCount;
             document.getElementById('pseudo-input').value = userPseudo;
             document.getElementById('my-pseudo-display').textContent = userPseudo;
-        };
+        }
 
         const updateGlobalUI = (total) => {
             document.getElementById('global-counter').textContent = total;
@@ -251,6 +310,49 @@
             });
         };
 
+        // Rendu de la liste des utilisateurs pour la page Admin
+        const renderAdminList = (data) => {
+            const adminUserList = document.getElementById('admin-user-list');
+            adminUserList.innerHTML = '';
+
+            const header = document.createElement('div');
+            header.className = 'flex justify-between items-center p-3 font-semibold text-red-400 border-b border-gray-700';
+            header.innerHTML = '<span class="w-1/2">Pseudo / ID</span><span class="w-1/4 text-center">Jägerbombs</span><span class="w-1/4 text-right">Action</span>';
+            adminUserList.appendChild(header);
+
+            data.forEach((user) => {
+                const item = document.createElement('div');
+                item.className = 'flex justify-between items-center p-3 bg-gray-800 rounded-lg my-2';
+
+                item.innerHTML = `
+                    <div class="w-1/2 flex flex-col">
+                        <span class="text-lg font-medium text-gray-200">${user.pseudo || 'Anonyme'} ${user.userId === userId ? '(VOUS)' : ''}</span>
+                        <span class="text-xs text-gray-500 break-all">${user.userId}</span>
+                    </div>
+                    <span class="w-1/4 text-center text-xl font-bold text-red-400">${user.count}</span>
+                    <div class="w-1/4 text-right">
+                        ${user.userId !== userId ? 
+                            `<button data-user-id="${user.userId}" class="ban-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded transition duration-150">
+                                Bannir (Supprimer)
+                            </button>` 
+                        : ''}
+                    </div>
+                `;
+                adminUserList.appendChild(item);
+            });
+            
+            // Attacher les écouteurs d'événements pour le bannissement
+            document.querySelectorAll('.ban-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const targetUserId = e.target.getAttribute('data-user-id');
+                    const pseudo = data.find(u => u.userId === targetUserId)?.pseudo || 'cet utilisateur';
+                    if (confirm(`Êtes-vous sûr de vouloir bannir ${pseudo} (ID: ${targetUserId}) ? Cette action est IRREVERSIBLE et supprime son compteur.`)) {
+                         banUser(targetUserId);
+                    }
+                });
+            });
+        };
+
         // --- Logique Firestore ---
 
         const startRealtimeListener = (currentUserId) => {
@@ -260,6 +362,7 @@
                 let totalCount = 0;
                 const leaderboardData = [];
                 let currentUserData = null;
+                let userExists = false;
 
                 snapshot.forEach((doc) => {
                     const data = doc.data();
@@ -269,23 +372,31 @@
 
                     if (doc.id === currentUserId) {
                         currentUserData = data;
+                        userExists = true;
                     }
                 });
-
+                
+                // Mettre à jour l'état de bannissement
+                isBanned = !userExists;
+                
                 if (currentUserData) {
                     personalCount = currentUserData.count || 0;
                     userPseudo = currentUserData.pseudo || 'Moi'; 
-                }
-
-                if (!currentUserData && currentUserId) {
+                } else if (userExists) {
+                    // Si le doc n'existe pas mais qu'on a un ID, l'initialiser
                     initializeUserDocument(currentUserId, userPseudo); 
                 }
 
-                updatePersonalUI();
+                updateMainUI(); // Mise à jour de l'UI principale (y compris l'état banni)
                 updateGlobalUI(totalCount);
                 renderLeaderboard(leaderboardData);
 
-                console.log(`Snapshot received. Global: ${totalCount}, Personal: ${personalCount}`);
+                // Mettre à jour la liste Admin si la page est affichée
+                if (document.getElementById('admin-page').classList.contains('hidden') === false) {
+                     renderAdminList(leaderboardData);
+                }
+
+                console.log(`Snapshot received. Global: ${totalCount}, Personal: ${personalCount}, Banned: ${isBanned}`);
 
             }, (error) => {
                 console.error("Erreur de lecture en temps réel:", error);
@@ -293,23 +404,54 @@
             });
         };
 
+        // Fonction pour recréer le document (si banni)
+        const rejoin = async () => {
+            if (isBanned && userId) {
+                 await initializeUserDocument(userId, userPseudo);
+            }
+        };
+
+        // Fonction de bannissement (suppression du document)
+        const banUser = async (targetUserId) => {
+             if (userId !== ADMIN_USER_ID) {
+                alert("Erreur: Vous n'avez pas les droits d'administrateur.");
+                return;
+            }
+            if (targetUserId === userId) {
+                alert("Erreur: Vous ne pouvez pas vous auto-bannir.");
+                return;
+            }
+            
+            try {
+                // Suppression du document (ce qui le retire du classement)
+                await deleteDoc(userRef(targetUserId));
+                console.log(`ADMIN: Utilisateur ${targetUserId} banni (document supprimé).`);
+                alert("Utilisateur supprimé avec succès.");
+            } catch (e) {
+                // Nécessite que l'admin ait la permission de delete sur tous les documents.
+                console.error("Erreur de bannissement (vérifiez les règles Firestore, besoin de 'delete' pour admin):", e);
+                alert("Erreur lors de la suppression. Veuillez vérifier vos règles Firestore (admin doit avoir 'delete').");
+            }
+        };
+
         const initializeUserDocument = async (uid, defaultPseudo) => {
             const initialData = {
-                pseudo: defaultPseudo,
+                pseudo: defaultPseudo || 'Anonyme',
                 count: 0,
                 lastUpdated: new Date()
             };
             try {
                 await setDoc(userRef(uid), initialData);
-                console.log("Document utilisateur initialisé.");
+                console.log("Document utilisateur initialisé/réinitialisé.");
             } catch (e) {
                 console.error("Erreur lors de l'initialisation du document:", e);
             }
         };
 
         const updateCount = async (increment) => {
-            if (!userId) {
-                console.error("Utilisateur non authentifié.");
+            if (!userId || isBanned) {
+                console.error("Action bloquée : non authentifié ou banni.");
+                alert("Veuillez vous réinscrire en cliquant sur 'Rejoindre la Soirée'.");
                 return;
             }
 
@@ -334,7 +476,7 @@
                 }
                 
                 personalCount = dataToUpdate.count;
-                updatePersonalUI();
+                updateMainUI();
 
                 await setDoc(userRef(userId), dataToUpdate, { merge: true });
                 console.log(`Compteur mis à jour: ${increment > 0 ? '+' : ''}${increment}`);
@@ -344,9 +486,9 @@
         };
 
         const resetCount = async () => {
-            if (!userId) {
-                console.error("Utilisateur non authentifié.");
-                return;
+            if (!userId || isBanned) {
+                 alert("Veuillez vous réinscrire en cliquant sur 'Rejoindre la Soirée'.");
+                 return;
             }
 
             try {
@@ -357,11 +499,10 @@
             }
         };
         
-        // FONCTION ADMIN : BAN ET RÉINITIALISATION GLOBALE
+        // FONCTION ADMIN : RÉINITIALISATION GLOBALE (déjà présente)
         const resetAllCounts = async () => {
             if (userId !== ADMIN_USER_ID) {
                 alert("Erreur: Vous n'avez pas les droits d'administrateur pour cette opération.");
-                console.error("Tentative d'accès non autorisé à la fonction admin.");
                 return;
             }
 
@@ -369,12 +510,9 @@
                  return;
             }
             
-            // Affichage d'un message non-bloquant
             document.getElementById('loading-indicator').classList.remove('hidden');
             document.getElementById('loading-indicator').querySelector('p').textContent = 'Réinitialisation globale en cours...';
 
-            console.warn("ADMIN: Tentative de réinitialisation globale de TOUS les compteurs.");
-            
             try {
                 const snapshot = await getDocs(collectionRef);
                 let errorCount = 0;
@@ -382,23 +520,20 @@
 
                 for (const docSnapshot of snapshot.docs) {
                     try {
-                        // L'admin a besoin d'une permission spéciale DANS LES RÈGLES FIREBASE pour pouvoir écrire sur TOUS les documents.
-                        // Sans une Cloud Function ou des règles très permissives, cette ligne échouera pour les autres utilisateurs.
+                        // Ceci nécessite la permission d'écriture de l'admin sur tous les documents
                         await setDoc(doc(db, COLLECTION_PATH, docSnapshot.id), { 
                             count: 0, 
                             lastUpdated: new Date() 
                         }, { merge: true });
                         successCount++;
                     } catch (e) {
-                        // Si le document est le vôtre, cela réussira. Si ce n'est pas le cas, cela échouera avec une erreur de permission
-                        // car les règles actuelles ne le permettent pas (sauf si vous les changez temporairement comme indiqué ci-dessous).
                         console.error(`ADMIN ÉCHEC : Erreur de permission pour réinitialiser le document ${docSnapshot.id}:`, e.message);
                         errorCount++;
                     }
                 }
 
                 document.getElementById('loading-indicator').classList.add('hidden');
-                alert(`ADMIN: Réinitialisation terminée : ${successCount} réussites, ${errorCount} échecs. (Note: Les échecs sont attendus si vous n'avez pas modifié temporairement les règles Firestore en mode Admin)`);
+                alert(`ADMIN: Réinitialisation terminée : ${successCount} réussites, ${errorCount} échecs. (Vérifiez les règles)`);
                 
             } catch (e) {
                 document.getElementById('loading-indicator').classList.add('hidden');
@@ -406,34 +541,23 @@
                 alert("Erreur critique lors de la réinitialisation globale. Voir console.");
             }
         };
-        // FIN FONCTION DE RÉINITIALISATION GLOBALE
 
-
-        const updatePseudo = async () => {
-            if (!userId) {
-                console.error("Utilisateur non authentifié.");
-                return;
+        // --- Fonctions de navigation ---
+        const showAdminPage = (show) => {
+            if (show && userId === ADMIN_USER_ID) {
+                document.getElementById('main-page').classList.add('hidden');
+                document.getElementById('admin-page').classList.remove('hidden');
+                document.getElementById('admin-link-btn').classList.add('hidden');
+                // Force le rafraîchissement de la liste admin avec les données existantes
+                startRealtimeListener(userId); 
+            } else {
+                document.getElementById('main-page').classList.remove('hidden');
+                document.getElementById('admin-page').classList.add('hidden');
+                if (userId === ADMIN_USER_ID) {
+                    document.getElementById('admin-link-btn').classList.remove('hidden');
+                }
             }
-
-            const newPseudo = document.getElementById('pseudo-input').value.trim() || 'Moi';
-
-            if (newPseudo === userPseudo) {
-                console.log("Pseudo inchangé.");
-                return;
-            }
-
-            try {
-                await setDoc(userRef(userId), { pseudo: newPseudo, lastUpdated: new Date() }, { merge: true });
-                
-                userPseudo = newPseudo;
-                savePseudoToCache(newPseudo); 
-                updatePersonalUI(); 
-                
-                console.log(`Pseudo mis à jour à: ${newPseudo}`);
-            } catch (e) {
-                console.error("Erreur lors de la mise à jour du pseudo:", e);
-            }
-        };
+        }
 
 
         // --- Événements UI ---
@@ -446,11 +570,15 @@
         });
 
         document.getElementById('save-pseudo-btn').addEventListener('click', updatePseudo);
-        
         document.getElementById('reset-count-btn').addEventListener('click', resetCount);
+        
+        // Événement pour le bouton "Rejoindre la Soirée" après un banissement
+        document.getElementById('rejoin-btn').addEventListener('click', rejoin);
 
-        document.getElementById('reset-all-btn').addEventListener('click', resetAllCounts);
-
+        // Événement sur la page admin
+        if (document.getElementById('reset-all-btn')) {
+            document.getElementById('reset-all-btn').addEventListener('click', resetAllCounts);
+        }
 
     </script>
 
