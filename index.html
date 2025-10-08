@@ -245,7 +245,9 @@
         const ADMIN_USER_ID = 'iaLTcBjcrvgptjy5GQh7ZDYwe5U2'; 
 
         // On récupère les variables globales du Canvas de manière sécurisée
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        // CORRECTION CRITIQUE: Nous utilisons 'record-jager' comme fallback car les règles de sécurité
+        // de l'utilisateur utilisent ce chemin fixe dans leur match /artifacts/record-jager/...
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'record-jager';
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyCNEj3jUaCupK5Web4TRnabpPld338b8Z8",
             authDomain: "record-jager.firebaseapp.com",
