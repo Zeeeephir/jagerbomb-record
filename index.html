@@ -76,7 +76,7 @@
     </div>
 
     <!-- Conteneur principal de l'application (Masqué si le timer est actif) -->
-    <div id="app-container" class="max-w-6xl mx-auto transition-opacity duration-500">
+    <div id="app-container" class="max-w-6xl mx-auto transition-opacity duration-500 hidden">
         <header class="text-center mb-10">
             <h1 class="text-6xl font-extrabold text-green-400 tracking-wider mb-1 drop-shadow-lg">
                 RECORD JÄGERBOMB 🔥
@@ -512,7 +512,7 @@
             if (isLaunched || isAdmin) {
                 document.getElementById('launch-timer-overlay').classList.add('hidden');
                 document.getElementById('launch-timer-overlay').classList.remove('flex'); 
-                document.getElementById('app-container').classList.remove('opacity-0');
+                document.getElementById('app-container').classList.remove('hidden');
                 
                 if (globalChange && !isAdmin) {
                     // Si c'est un changement global (lancement), demander le pseudo
@@ -531,7 +531,7 @@
                 }
 
             } else {
-                document.getElementById('app-container').classList.add('opacity-0');
+                document.getElementById('app-container').classList.add('hidden');
                 document.getElementById('launch-timer-overlay').classList.add('flex'); // Ajouter 'flex' pour centrer
                 document.getElementById('launch-timer-overlay').classList.remove('hidden');
             }
