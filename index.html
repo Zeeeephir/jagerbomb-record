@@ -701,7 +701,24 @@
 
             }, (error) => {
                 console.error("Erreur de lecture en temps réel (Vérifiez les règles 'read'):", error);
-                document.getElementById('leaderboard-list').innerHTML = '<p class="text-red-500">Erreur de connexion en temps réel. Le classement n\'a pas pu être chargé (Vérifiez votre console pour les logs de débogage Firestore).</p>';
+                
+                // --- NOUVEAU: Affichage de l'erreur détaillée sur l'UI pour les utilisateurs mobiles ---
+                const errorCode = error.code || 'INCONNU';
+                const errorMessage = error.message || 'Détails non disponibles.';
+
+                showCustomModal(
+                    "🚨 Erreur de Connexion Firestore",
+                    `Le classement n'a pas pu être chargé.
+
+Code d'erreur: ${errorCode}
+Message détaillé: ${errorMessage}
+
+Action requise (Admin): Veuillez vérifier que le **chemin de la collection** est correct et que les règles de sécurité Firestore autorisent la lecture globale (allow read: if true;).`,
+                    'alert'
+                );
+                // ----------------------------------------------------------------------------------------
+
+                document.getElementById('leaderboard-list').innerHTML = '<p class="text-red-500">Erreur de connexion en temps réel. Le classement n\'a pas pu être chargé.</p>';
             });
         };
 
