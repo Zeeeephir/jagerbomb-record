@@ -360,33 +360,42 @@
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         
-                        // FIX CRITIQUE: Forcer l'ID Admin pour le déblocage de l'UI de test si l'UID n'est pas déjà l'Admin ID
-                        if (user.uid !== ADMIN_USER_ID) {
-                            console.warn("ADMIN HACK APPLIQUÉ: Remplacement de l'UID par l'ID Admin pour le déblocage de l'UI de test. UID réel:", user.uid);
-                            userId = ADMIN_USER_ID;
+                        let currentUid = user.uid; // L'UID réel de la session Firebase (anonyme ou non)
+                        let isCurrentUserAdmin = false;
+                        
+                        // Si l'UID réel correspond à l'Admin ID
+                        if (currentUid === ADMIN_USER_ID) {
+                            isCurrentUserAdmin = true;
+                            userId = currentUid;
+                            console.log("Détection: Utilisateur connecté en tant qu'ADMIN (UID réel).");
+                        } 
+                        // Sinon, si nous sommes en mode Canvas (pas de token custom) et que nous voulons tester l'Admin
+                        else if (initialAuthToken === null && currentUid !== ADMIN_USER_ID) {
+                            // FIX CRITIQUE: Utilisateurs anonymes = ils doivent voir le chrono.
+                            // Si nous ne sommes pas l'Admin, l'UID est l'UID anonyme.
+                            userId = currentUid; 
                         } else {
-                            userId = user.uid;
+                            userId = currentUid;
                         }
 
-                        // Affichage des IDs immédiatement après l'authentification (fix de l'Admin UI)
-                        document.getElementById('user-id-display').textContent = `ID Utilisateur: ${userId}`;
-                        document.getElementById('admin-id-display').textContent = ADMIN_USER_ID; 
-
-                        // Si l'utilisateur est l'admin (basé sur l'UID obtenu)
-                        if (userId === ADMIN_USER_ID) {
+                        // Déblocage de l'interface Admin et du Timer
+                        if (isCurrentUserAdmin) {
                             document.getElementById('timer-message').textContent = 'Admin Mode: Accès illimité.';
                             isLaunched = true; // Forcer le lancement pour l'admin
-                            // Afficher le bouton Admin ici, sans dépendre du listener
                             document.getElementById('admin-link-btn').classList.remove('hidden');
                         }
                         
-                        console.log("User ID:", userId);
+                        // Affichage des IDs immédiatement
+                        document.getElementById('user-id-display').textContent = `ID Utilisateur: ${userId}`;
+                        document.getElementById('admin-id-display').textContent = ADMIN_USER_ID; 
+                        
+                        console.log("User ID déterminé:", userId);
                         
                         document.getElementById('loading-indicator').classList.add('hidden');
                         checkLaunchStatus(); // Commence le check du timer
 
                         // Si l'application est lancée (ou Admin), on lance le listener
-                        if (isLaunched) {
+                        if (isLaunched || isCurrentUserAdmin) {
                             startRealtimeListener(userId);
                         } else {
                             // Si non lancé, on démarre seulement le compte à rebours
