@@ -368,15 +368,19 @@
                             userId = user.uid;
                         }
 
+                        // Affichage des IDs immédiatement après l'authentification (fix de l'Admin UI)
+                        document.getElementById('user-id-display').textContent = `ID Utilisateur: ${userId}`;
+                        document.getElementById('admin-id-display').textContent = ADMIN_USER_ID; 
+
                         // Si l'utilisateur est l'admin (basé sur l'UID obtenu)
                         if (userId === ADMIN_USER_ID) {
                             document.getElementById('timer-message').textContent = 'Admin Mode: Accès illimité.';
                             isLaunched = true; // Forcer le lancement pour l'admin
+                            // Afficher le bouton Admin ici, sans dépendre du listener
+                            document.getElementById('admin-link-btn').classList.remove('hidden');
                         }
                         
                         console.log("User ID:", userId);
-                        document.getElementById('user-id-display').textContent = `ID Utilisateur: ${userId}`;
-                        document.getElementById('admin-id-display').textContent = ADMIN_USER_ID; 
                         
                         document.getElementById('loading-indicator').classList.add('hidden');
                         checkLaunchStatus(); // Commence le check du timer
@@ -437,6 +441,8 @@
                 clearInterval(countdownInterval);
                 countdownInterval = null;
             }
+            // Appel de startRealtimeListener directement pour relancer la connexion
+            startRealtimeListener(userId);
             checkLaunchStatus(false);
             showCustomModal("LANCEMENT FORCÉ", "La soirée a été lancée immédiatement par l'administrateur.", 'alert');
         };
@@ -533,10 +539,12 @@
             if (isBanned) {
                 document.getElementById('banned-message').classList.remove('hidden');
                 document.getElementById('tracker-content').classList.add('hidden');
-                document.getElementById('admin-link-btn').classList.add('hidden'); 
+                document.getElementById('admin-link-btn').classList.add('hidden'); // Cacher le lien même si admin
             } else {
                 document.getElementById('banned-message').classList.add('hidden');
                 document.getElementById('tracker-content').classList.remove('hidden');
+                
+                // Rétablir le bouton Admin s'il a été caché par le banned-message
                 if (userId === ADMIN_USER_ID) {
                     document.getElementById('admin-link-btn').classList.remove('hidden');
                 }
