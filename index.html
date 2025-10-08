@@ -248,21 +248,9 @@
             messagingSenderId: "41135986307",
             appId: "1:41135986307:web:3d24ec3c82ae92f7d6edb6"
         };
-        // CORRECTION MAJEURE: Si le token n'est pas défini, on le force à l'ID ADMIN pour les tests
-        // NOTE: Ceci ne fonctionnera que si Firebase est configuré pour accepter cet ID comme admin dans ses règles.
+        
         const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null; 
         
-        // Hack: Permet de se connecter en Admin pour le développement si le token n'est pas injecté par le Canvas
-        let forceAdminLogin = false;
-        if (typeof __initial_auth_token === 'undefined' && firebaseConfig.apiKey) {
-             console.warn("ATTENTION: Le token d'authentification initial n'est pas défini. Tentative de connexion anonyme, puis utilisation de l'ID Admin pour simuler les droits si la connexion anonyme échoue/ne suffit pas pour les tests.");
-             // Pour les tests locaux, on se contente de l'ID Admin simulé
-             // Notez que si vous voulez forcer l'ID Admin pour les tests locaux, 
-             // la meilleure pratique est d'utiliser un Custom Token généré par Firebase Admin SDK.
-             // Ici, nous faisons confiance à l'environnement d'exécution du Canvas pour fournir le token Admin si nécessaire.
-             // La connexion restera anonyme si le token n'est pas fourni.
-        }
-
 
         let db;
         let auth;
@@ -371,21 +359,25 @@
 
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
-                        // Utilisation de l'ID réel ou de l'ID Admin simulé pour le Canvas
                         userId = user.uid;
                         
+                        // CORRECTION CRITIQUE: Si l'ID actuel n'est pas l'ID Admin, mais que le token n'est pas fourni,
+                        // et que l'ID est celui que vous avez spécifié, nous allons simuler les droits admin côté client
+                        // pour débloquer l'interface et le timer.
+                        if (initialAuthToken === null && userId !== ADMIN_USER_ID && userId === 'default-app-id') {
+                            // C'est un cas particulier où le sign-in anonyme retourne un ID qui n'est pas votre Admin ID
+                            // On tente de le forcer pour les tests si les conditions correspondent au Canvas
+                            userId = ADMIN_USER_ID;
+                            console.warn("ADMIN HACK APPLIQUÉ: Le userId a été forcé sur l'ID Admin pour le déblocage de l'UI.");
+                        }
+
+
                         // Si l'utilisateur est l'admin (basé sur l'UID obtenu)
                         if (userId === ADMIN_USER_ID) {
                             document.getElementById('timer-message').textContent = 'Admin Mode: Accès illimité.';
                             isLaunched = true; // Forcer le lancement pour l'admin
                         }
                         
-                        // Si le Canvas ne fournit pas de token, on peut *simuler* l'ID Admin pour les tests locaux
-                        // ATTENTION: Ceci ne donne PAS les vrais droits, mais permet de tester l'UI Admin.
-                        if (!initialAuthToken && userId !== ADMIN_USER_ID) {
-                            console.warn("Mode Simulé: L'ID utilisateur n'est pas l'ID Admin défini. Les actions Admin nécessitant des règles de sécurité étendues peuvent échouer.");
-                        }
-
                         console.log("User ID:", userId);
                         document.getElementById('user-id-display').textContent = `ID Utilisateur: ${userId}`;
                         document.getElementById('admin-id-display').textContent = ADMIN_USER_ID; 
