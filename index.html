@@ -646,7 +646,7 @@
             });
         };
 
-        // --- Logique Firestore (Légèrement modifiée pour les modales et correction admin) ---
+        // --- Logique Firestore (Mise à jour des messages d'erreur) ---
 
         const startRealtimeListener = (currentUserId) => {
             const q = query(collectionRef);
@@ -691,7 +691,7 @@
 
             }, (error) => {
                 console.error("Erreur de lecture en temps réel (Vérifiez les règles 'read'):", error);
-                document.getElementById('leaderboard-list').innerHTML = '<p class="text-red-500">Erreur de connexion en temps réel. (Règles Firestore ?)</p>';
+                document.getElementById('leaderboard-list').innerHTML = '<p class="text-red-500">Erreur de connexion en temps réel. Le classement n\'a pas pu être chargé (Règles Firestore ?)</p>';
             });
         };
 
@@ -703,6 +703,7 @@
 
         // FIX ADMIN: Autorise l'admin à supprimer n'importe quel document sans vérification d'ID du doc
         const banUser = async (targetUserId, pseudo) => {
+             // Vérification d'ID pour l'affichage de l'erreur seulement, la vraie permission est dans Firestore
              if (userId !== ADMIN_USER_ID) {
                 showCustomModal("Accès Refusé", "Vous n'avez pas les droits d'administrateur.", 'alert');
                 return;
@@ -721,7 +722,7 @@
                 console.error(`Erreur de bannissement de ${targetUserId} :`, e);
                 // Si l'erreur est une permission Denied, c'est que les règles Firestore n'autorisent pas 'delete' pour l'admin
                 const message = e.message.includes("PERMISSION_DENIED") 
-                    ? "Erreur Firestore: L'administrateur n'a pas la permission de SUPPRIMER ce document. Vérifiez les règles de sécurité."
+                    ? "Erreur Firestore: L'administrateur n'a pas la permission de SUPPRIMER ce document. **Vérifiez vos règles de sécurité Firestore pour autoriser l'Admin à 'delete' tous les documents.**"
                     : "Erreur critique lors de la suppression.";
                 showCustomModal("Erreur", message, 'alert');
             }
@@ -739,7 +740,7 @@
             } catch (e) {
                 console.error("Erreur lors de l'initialisation du document:", e);
                 // Si l'initialisation échoue, c'est probablement dû à une règle 'write' trop restrictive pour les nouveaux utilisateurs anonymes
-                showCustomModal("Erreur Firestore", "Erreur lors de l'initialisation de votre compte. (Règles 'write' trop strictes ?)", 'alert');
+                showCustomModal("Erreur Firestore", "Erreur lors de l'initialisation de votre compte. **Veuillez vérifier que les règles Firestore autorisent la création de votre document.**", 'alert');
             }
         };
 
@@ -770,7 +771,10 @@
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du compteur:", e);
                 // Message d'erreur plus clair pour l'utilisateur
-                showCustomModal("Erreur Firestore", "Erreur lors de la mise à jour de votre score. (Vérifiez vos règles 'write').", 'alert');
+                const message = e.message.includes("PERMISSION_DENIED") 
+                    ? "Erreur Firestore: La permission d'écriture a été refusée. **Vérifiez vos règles Firestore pour autoriser l'écriture sur votre document.**"
+                    : "Erreur critique lors de la mise à jour du score.";
+                showCustomModal("Erreur Firestore", message, 'alert');
             }
         };
 
@@ -791,7 +795,10 @@
                             console.log("Compteur personnel réinitialisé à 0.");
                         } catch (e) {
                             console.error("Erreur lors de la réinitialisation du compteur:", e);
-                            showCustomModal("Erreur Firestore", "Erreur lors de la réinitialisation de votre score.", 'alert');
+                            const message = e.message.includes("PERMISSION_DENIED") 
+                                ? "Erreur Firestore: La permission d'écriture a été refusée. **Vérifiez vos règles Firestore.**"
+                                : "Erreur critique lors de la réinitialisation.";
+                            showCustomModal("Erreur Firestore", message, 'alert');
                         }
                     }
                 }
@@ -821,7 +828,10 @@
                 console.log(`Pseudo mis à jour à: ${newPseudo}`);
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du pseudo:", e);
-                showCustomModal("Erreur Firestore", "Erreur lors de la mise à jour de votre pseudo.", 'alert');
+                const message = e.message.includes("PERMISSION_DENIED") 
+                    ? "Erreur Firestore: La permission d'écriture a été refusée. **Vérifiez vos règles Firestore.**"
+                    : "Erreur critique lors de la mise à jour du pseudo.";
+                showCustomModal("Erreur Firestore", message, 'alert');
             }
         };
 
@@ -862,7 +872,7 @@
 
                             document.getElementById('loading-indicator').classList.add('hidden');
                             if (errorCount > 0) {
-                                showCustomModal("Alerte Admin", `ADMIN: Réinitialisation terminée avec ${successCount} réussites et ${errorCount} échecs. Vérifiez que votre ID admin a la permission 'write' sur tous les documents dans les règles de sécurité Firestore.`, 'alert');
+                                showCustomModal("Alerte Admin", `ADMIN: Réinitialisation terminée avec ${successCount} réussites et ${errorCount} échecs. **Vérifiez que votre ID admin a la permission 'write' sur tous les documents dans les règles de sécurité Firestore.**`, 'alert');
                             } else {
                                 showCustomModal("Réinitialisation Terminée", `ADMIN: Réinitialisation de TOUS les compteurs réussie (${successCount} documents).`, 'alert');
                             }
