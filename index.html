@@ -487,7 +487,9 @@
             }, (error) => {
                 console.error("Erreur de lecture des paramètres globaux. Cela peut bloquer le lancement automatique et manuel. Vérifiez les règles 'read' sur le document settings/launch-state:", error);
                 
-                // Si le listener global échoue (permission-denied), l'Admin peut toujours forcer le lancement localement
+                // --- FIX RESILIENCE TIMER NON-ADMIN ---
+                // Si le listener global échoue (permission-denied pour les non-admins), 
+                // on démarre le compte à rebours localement pour éviter la page blanche.
                 const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_USER_ID;
 
                 if (!isAdmin) {
@@ -553,7 +555,7 @@
                  console.error("Erreur Admin lors de la mise à jour du statut de lancement global:", e);
                  // Message d'erreur plus précis pour l'admin
                  const message = e.message.includes("PERMISSION_DENIED") 
-                    ? "Erreur Firestore: L'administrateur n'a pas la permission d'ÉCRIRE sur le document de Settings. **Vérifiez vos règles Firestore pour autoriser l'Admin à 'write' sur settings/launch-state.**"
+                    ? "Erreur Firestore: L'administrateur n'a pas la permission d'ÉCRIRE sur le document de Settings. **Règle manquante: allow write: if request.auth.uid == 'iaLTcBjcrvgptjy5GQh7ZDYwe5U2' sur /artifacts/{appId}/public/data/settings/{docId}**"
                     : "Erreur critique lors de la mise à jour du statut.";
 
                  showCustomModal("Erreur Admin", message, 'alert');
@@ -576,7 +578,7 @@
             } catch (e) {
                  console.error("Erreur Admin lors de la réinitialisation du statut de lancement global:", e);
                  const message = e.message.includes("PERMISSION_DENIED") 
-                    ? "Erreur Firestore: L'administrateur n'a pas la permission d'ÉCRIRE sur le document de Settings. **Vérifiez vos règles Firestore pour autoriser l'Admin à 'write' sur settings/launch-state.**"
+                    ? "Erreur Firestore: L'administrateur n'a pas la permission d'ÉCRIRE sur le document de Settings. **Règle manquante: allow write: if request.auth.uid == 'iaLTcBjcrvgptjy5GQh7ZDYwe5U2' sur /artifacts/{appId}/public/data/settings/{docId}**"
                     : "Erreur critique lors de la réinitialisation du statut.";
                  showCustomModal("Erreur Admin", message, 'alert');
             }
