@@ -485,9 +485,12 @@
                 }
                 
             }, (error) => {
-                console.error("Erreur de lecture des paramètres globaux. Cela peut bloquer le lancement automatique et manuel. Vérifiez les règles 'read' sur /artifacts/{appId}/public/data/settings/global :", error);
-                // Si le listener global échoue, l'Admin peut toujours forcer le lancement localement
-                if (!isCurrentUserAdmin) {
+                console.error("Erreur de lecture des paramètres globaux. Cela peut bloquer le lancement automatique et manuel. Vérifiez les règles 'read' sur le document settings/launch-state:", error);
+                
+                // Si le listener global échoue (permission-denied), l'Admin peut toujours forcer le lancement localement
+                const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_USER_ID;
+
+                if (!isAdmin) {
                     // Démarrer le chrono local si le listener global échoue
                     if (!countdownInterval) {
                         updateCountdown();
@@ -548,7 +551,12 @@
                 showCustomModal("LANCEMENT FORCÉ", "La soirée a été lancée immédiatement. Synchronisation en cours pour tous les utilisateurs.", 'alert');
             } catch (e) {
                  console.error("Erreur Admin lors de la mise à jour du statut de lancement global:", e);
-                 showCustomModal("Erreur Admin", "Erreur lors de la mise à jour du statut de lancement global. Vérifiez les droits 'write' de l'Admin sur le document Settings.", 'alert');
+                 // Message d'erreur plus précis pour l'admin
+                 const message = e.message.includes("PERMISSION_DENIED") 
+                    ? "Erreur Firestore: L'administrateur n'a pas la permission d'ÉCRIRE sur le document de Settings. **Vérifiez vos règles Firestore pour autoriser l'Admin à 'write' sur settings/launch-state.**"
+                    : "Erreur critique lors de la mise à jour du statut.";
+
+                 showCustomModal("Erreur Admin", message, 'alert');
             }
         };
 
@@ -567,7 +575,10 @@
                 showCustomModal("CHRONO RÉACTIVÉ", `Le compte à rebours a été réinitialisé.`, 'alert');
             } catch (e) {
                  console.error("Erreur Admin lors de la réinitialisation du statut de lancement global:", e);
-                 showCustomModal("Erreur Admin", "Erreur lors de la réinitialisation du statut de lancement global.", 'alert');
+                 const message = e.message.includes("PERMISSION_DENIED") 
+                    ? "Erreur Firestore: L'administrateur n'a pas la permission d'ÉCRIRE sur le document de Settings. **Vérifiez vos règles Firestore pour autoriser l'Admin à 'write' sur settings/launch-state.**"
+                    : "Erreur critique lors de la réinitialisation du statut.";
+                 showCustomModal("Erreur Admin", message, 'alert');
             }
         };
 
