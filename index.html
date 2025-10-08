@@ -223,9 +223,15 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
-        // CORRECTION: Ajout de signInWithCustomToken à la liste des imports
+        // Ajout de setLogLevel pour le débogage.
+        import { setLogLevel } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
+
+        // ACTIVER LE DÉBOGAGE POUR FIREBASE (DOIT ÊTRE AU DÉBUT)
+        // Ceci va afficher toutes les requêtes et réponses Firestore dans la console, y compris les erreurs de permission détaillées.
+        setLogLevel('debug');
+
 
         // --- Configuration de Lancement et Admin ---
         
@@ -369,12 +375,8 @@
                             userId = currentUid;
                             console.log("Détection: Utilisateur connecté en tant qu'ADMIN (UID réel).");
                         } 
-                        // Sinon, si nous sommes en mode Canvas (pas de token custom) et que nous voulons tester l'Admin
-                        else if (initialAuthToken === null && currentUid !== ADMIN_USER_ID) {
-                            // FIX CRITIQUE: Utilisateurs anonymes = ils doivent voir le chrono.
-                            // Si nous ne sommes pas l'Admin, l'UID est l'UID anonyme.
-                            userId = currentUid; 
-                        } else {
+                        // Sinon, l'UID est l'UID anonyme.
+                        else {
                             userId = currentUid;
                         }
 
@@ -475,13 +477,16 @@
 
 
         const checkLaunchStatus = (justLaunched = false) => {
-            if (isLaunched || userId === ADMIN_USER_ID) {
+            // FIX: Utiliser l'UID réel pour l'admin, non pas une variable globale potentiellement modifiée.
+            const isAdmin = auth.currentUser && auth.currentUser.uid === ADMIN_USER_ID; 
+
+            if (isLaunched || isAdmin) {
                 document.getElementById('launch-timer-overlay').classList.add('hidden');
                 document.getElementById('launch-timer-overlay').classList.remove('flex'); 
                 document.getElementById('app-container').classList.remove('opacity-0');
                 
                 // Si l'application vient d'être lancée (et que ce n'est pas l'admin)
-                if (justLaunched && userId !== ADMIN_USER_ID) {
+                if (justLaunched && !isAdmin) {
                     startRealtimeListener(userId); 
                     promptForPseudo(); // Demande le pseudo
                 } else if (!justLaunched && !countdownInterval) {
@@ -696,7 +701,7 @@
 
             }, (error) => {
                 console.error("Erreur de lecture en temps réel (Vérifiez les règles 'read'):", error);
-                document.getElementById('leaderboard-list').innerHTML = '<p class="text-red-500">Erreur de connexion en temps réel. Le classement n\'a pas pu être chargé (Règles Firestore ?)</p>';
+                document.getElementById('leaderboard-list').innerHTML = '<p class="text-red-500">Erreur de connexion en temps réel. Le classement n\'a pas pu être chargé (Vérifiez votre console pour les logs de débogage Firestore).</p>';
             });
         };
 
