@@ -26,16 +26,56 @@
             0%, 100% { opacity: 1; }
             50% { opacity: .75; }
         }
+
+        /* --- Styles Néon pour le Timer --- */
+        .neon-glow {
+            text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #f97316, 0 0 82px #f97316, 0 0 92px #f97316, 0 0 102px #f97316, 0 0 151px #f97316;
+            color: #fed7aa; /* Orange clair */
+        }
+        .neon-text {
+            color: #d1fae5; /* Vert très clair */
+            text-shadow: 0 0 5px #4ade80, 0 0 10px #4ade80, 0 0 15px #4ade80;
+        }
+        /* --- Fin Styles Néon --- */
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 min-h-screen p-4 sm:p-8">
 
+    <!-- Indicateur de Chargement Initial -->
     <div id="loading-indicator" class="fixed inset-0 bg-gray-900 bg-opacity-90 flex items-center justify-center z-50">
         <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-orange-500"></div>
         <p class="ml-4 text-xl">Connexion aux serveurs de Jäger...</p>
     </div>
 
-    <!-- Conteneur principal de l'application -->
+    <!-- NOUVEAU: Overlay du Compte à Rebours (visible tant que non lancé) -->
+    <div id="launch-timer-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-95 flex flex-col items-center justify-center z-40 hidden">
+        <h2 class="text-4xl sm:text-5xl neon-text font-extrabold mb-10 text-center px-4">
+            LANCEMENT DE LA SOIRÉE DANS...
+        </h2>
+        <div id="countdown-display" class="flex space-x-4 md:space-x-8 text-center">
+            <div class="p-4 glass-card rounded-xl">
+                <span id="days" class="text-6xl md:text-8xl font-black neon-glow block">00</span>
+                <span class="text-sm md:text-xl neon-text">JOURS</span>
+            </div>
+            <div class="p-4 glass-card rounded-xl">
+                <span id="hours" class="text-6xl md:text-8xl font-black neon-glow block">00</span>
+                <span class="text-sm md:text-xl neon-text">HEURES</span>
+            </div>
+            <div class="p-4 glass-card rounded-xl">
+                <span id="minutes" class="text-6xl md:text-8xl font-black neon-glow block">00</span>
+                <span class="text-sm md:text-xl neon-text">MINUTES</span>
+            </div>
+            <div class="p-4 glass-card rounded-xl">
+                <span id="seconds" class="text-6xl md:text-8xl font-black neon-glow block">00</span>
+                <span class="text-sm md:text-xl neon-text">SECONDES</span>
+            </div>
+        </div>
+        <p id="timer-message" class="text-lg text-gray-500 mt-8">
+            En attente du lancement officiel.
+        </p>
+    </div>
+
+    <!-- Conteneur principal de l'application (Masqué si le timer est actif) -->
     <div id="app-container" class="max-w-6xl mx-auto opacity-0 transition-opacity duration-500">
         <header class="text-center mb-10">
             <h1 class="text-6xl font-extrabold text-green-400 tracking-wider mb-1 drop-shadow-lg">
@@ -138,7 +178,7 @@
             <div class="glass-card p-6 rounded-xl mb-6">
                 <h2 class="text-3xl font-bold text-red-500 mb-4 border-b border-gray-700 pb-2">Outils d'Administration</h2>
                 
-                <p class="text-lg text-gray-300 mb-4">Votre ID Admin: <span class="font-mono text-red-400 break-all">${ADMIN_USER_ID}</span></p>
+                <p class="text-lg text-gray-300 mb-4">Votre ID Admin: <span id="admin-id-display" class="font-mono text-red-400 break-all"></span></p>
 
                 <button id="reset-all-btn" class="bg-red-900 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg transition duration-150 border border-red-700">
                     Réinitialiser TOUS les Compteurs
@@ -155,18 +195,42 @@
         </div> <!-- Fin #admin-page -->
 
     </div>
+    
+    <!-- NOUVEAU: Modale Générique (Remplace alert/confirm) -->
+    <div id="custom-modal-container" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-6 rounded-xl w-11/12 max-w-sm border-green-500/30">
+            <h3 id="modal-title" class="text-xl font-bold text-green-400 mb-4 border-b border-gray-700 pb-2">Message</h3>
+            <p id="modal-message" class="text-gray-300 mb-6"></p>
+            <input type="text" id="modal-input" placeholder="Entrez votre pseudo..." class="hidden w-full p-3 rounded-lg bg-gray-800 text-white border border-green-700 focus:ring-green-500 focus:border-green-500 transition duration-150 shadow-inner mb-4">
+            <div class="flex justify-end space-x-3">
+                <button id="modal-cancel-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition duration-150 hidden">Annuler</button>
+                <button id="modal-confirm-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150">OK</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // CHANGÉ: Utilisation d'une version de SDK potentiellement plus stable pour l'environnement HTML autonome (v9.1.0)
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js";
-        // Importation de deleteDoc pour la fonction de bannissement
+        // CORRECTION: Ajout de signInWithCustomToken à la liste des imports
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/9.1.0/firebase-firestore.js";
 
-        // --- Configuration Firebase et Initialisation ---
+        // --- Configuration de Lancement et Admin ---
         
-        const firebaseConfig = {
+        // 🚨 Date/Heure de Lancement : Jeudi 9 octobre 2025 à 20h00
+        const LAUNCH_DATE_STR = '2025-10-09T20:00:00'; 
+        const LAUNCH_DATE = new Date(LAUNCH_DATE_STR).getTime();
+        let isLaunched = false;
+        let countdownInterval = null; // Pour stocker l'intervalle du compte à rebours
+
+        // 🚨 Votre ID utilisateur Administrateur
+        const ADMIN_USER_ID = 'iaLTcBjcrvgptjy5GQh7ZDYwe5U2'; 
+
+        // On récupère les variables globales du Canvas de manière sécurisée
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "AIzaSyCNEj3jUaCupK5Web4TRnabpPld338b8Z8",
             authDomain: "record-jager.firebaseapp.com",
             projectId: "record-jager",
@@ -174,17 +238,85 @@
             messagingSenderId: "41135986307",
             appId: "1:41135986307:web:3d24ec3c82ae92f7d6edb6"
         };
-
-        const appId = "record-jager"; 
-        const initialAuthToken = null; 
-
-        // 🚨 Votre ID utilisateur Administrateur
-        const ADMIN_USER_ID = 'iaLTcBjcrvgptjy5GQh7ZDYwe5U2'; 
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         let db;
         let auth;
         let userId = null;
-        let isBanned = false; // Nouvel état pour gérer le message de bannissement
+        let isBanned = false; 
+
+        // --- Fonctions Modales (Remplacement de alert/confirm) ---
+
+        /**
+         * Affiche une modale personnalisée.
+         * @param {string} title - Titre de la modale.
+         * @param {string} message - Message principal.
+         * @param {string} type - 'alert', 'confirm', ou 'prompt'.
+         * @param {function} callback - Fonction appelée après confirmation (pour confirm/prompt).
+         * @param {string} inputPlaceholder - Placeholder pour le type 'prompt'.
+         */
+        const showCustomModal = (title, message, type = 'alert', callback = () => {}, inputPlaceholder = '') => {
+            const modalContainer = document.getElementById('custom-modal-container');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const modalInput = document.getElementById('modal-input');
+            const confirmBtn = document.getElementById('modal-confirm-btn');
+            const cancelBtn = document.getElementById('modal-cancel-btn');
+
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalInput.classList.add('hidden');
+            cancelBtn.classList.add('hidden');
+            // Afficher la modale en utilisant flex
+            modalContainer.classList.remove('hidden');
+            modalContainer.classList.add('flex');
+
+            // Réinitialiser les écouteurs d'événements
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+
+            if (type === 'alert') {
+                confirmBtn.textContent = 'OK';
+                confirmBtn.onclick = () => {
+                    modalContainer.classList.remove('flex');
+                    modalContainer.classList.add('hidden');
+                };
+            } else if (type === 'confirm') {
+                cancelBtn.classList.remove('hidden');
+                confirmBtn.textContent = 'Confirmer';
+
+                confirmBtn.onclick = () => {
+                    modalContainer.classList.remove('flex');
+                    modalContainer.classList.add('hidden');
+                    callback(true);
+                };
+                cancelBtn.onclick = () => {
+                    modalContainer.classList.remove('flex');
+                    modalContainer.classList.add('hidden');
+                    callback(false);
+                };
+            } else if (type === 'prompt') {
+                modalInput.classList.remove('hidden');
+                modalInput.value = '';
+                modalInput.placeholder = inputPlaceholder;
+                cancelBtn.classList.remove('hidden');
+                confirmBtn.textContent = 'Valider';
+
+                confirmBtn.onclick = () => {
+                    modalContainer.classList.remove('flex');
+                    modalContainer.classList.add('hidden');
+                    callback(modalInput.value.trim());
+                };
+                cancelBtn.onclick = () => {
+                    modalContainer.classList.remove('flex');
+                    modalContainer.classList.add('hidden');
+                    callback(null);
+                };
+            }
+
+        };
+
+        // --- Initialisation Firebase ---
 
         if (!firebaseConfig.apiKey) {
             console.error("Firebase config is incomplete.");
@@ -198,11 +330,17 @@
             
             const initializeAuth = async () => {
                 try {
-                    await signInAnonymously(auth);
-                    console.log("Signed in anonymously.");
+                    // Utiliser le token si disponible, sinon se connecter anonymement
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                        console.log("Signed in with custom token.");
+                    } else {
+                        await signInAnonymously(auth);
+                        console.log("Signed in anonymously.");
+                    }
                 } catch (error) {
                     console.error("Authentication error:", error);
-                    document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur d\'authentification. Avez-vous activé le service Anonyme dans votre console Firebase ?</p>';
+                    document.getElementById('loading-indicator').innerHTML = '<p class="text-red-500 text-xl">Erreur d\'authentification.</p>';
                     return;
                 }
 
@@ -211,18 +349,28 @@
                         userId = user.uid;
                         console.log("User ID:", userId);
                         document.getElementById('user-id-display').textContent = `ID Utilisateur: ${userId}`;
-                        document.getElementById('app-container').classList.remove('opacity-0');
-                        document.getElementById('loading-indicator').classList.add('hidden');
+                        document.getElementById('admin-id-display').textContent = ADMIN_USER_ID; // Afficher l'ID admin
 
-                        // Affiche le bouton d'accès à la page Admin
+                        // Vérifie si l'admin doit bypasser le timer
                         if (userId === ADMIN_USER_ID) {
-                            document.getElementById('admin-link-btn').classList.remove('hidden');
+                            document.getElementById('timer-message').textContent = 'Admin Mode: Accès illimité.';
+                            isLaunched = true; // Forcer le lancement pour l'admin
+                        }
+                        
+                        document.getElementById('loading-indicator').classList.add('hidden');
+                        checkLaunchStatus(); // Commence le check du timer
+
+                        // Si l'application est lancée (ou Admin), on lance le listener
+                        if (isLaunched) {
+                            startRealtimeListener(userId);
+                        } else {
+                            // Si non lancé, on démarre seulement le compte à rebours
+                            updateCountdown();
+                            countdownInterval = setInterval(updateCountdown, 1000);
                         }
 
-                        startRealtimeListener(userId);
                     } else {
                         console.log("User is signed out.");
-                        userId = crypto.randomUUID();
                     }
                 });
             };
@@ -230,13 +378,80 @@
             initializeAuth();
         }
 
-        // --- Références Firestore ---
+        // --- Logique du Compte à Rebours ---
+
+        const updateCountdown = () => {
+            const now = new Date().getTime();
+            const distance = LAUNCH_DATE - now;
+
+            if (distance < 0) {
+                // Lancement !
+                clearInterval(countdownInterval);
+                isLaunched = true;
+                checkLaunchStatus(true); // Débloque l'application et affiche la modale de pseudo
+                return;
+            }
+
+            // Calcul des temps
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24)).toString().padStart(2, '0');
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000).toString().padStart(2, '0');
+
+            document.getElementById('days').textContent = days;
+            document.getElementById('hours').textContent = hours;
+            document.getElementById('minutes').textContent = minutes;
+            document.getElementById('seconds').textContent = seconds;
+        };
+
+        const checkLaunchStatus = (justLaunched = false) => {
+            if (isLaunched || userId === ADMIN_USER_ID) {
+                document.getElementById('launch-timer-overlay').classList.add('hidden');
+                document.getElementById('launch-timer-overlay').classList.remove('flex'); // S'assurer que 'flex' est retiré
+                document.getElementById('app-container').classList.remove('opacity-0');
+                
+                // Si l'application vient d'être lancée (et que ce n'est pas l'admin)
+                if (justLaunched && userId !== ADMIN_USER_ID) {
+                    startRealtimeListener(userId); // Démarre l'écoute des données
+                    promptForPseudo(); // Demande le pseudo
+                } else if (!justLaunched && !countdownInterval) {
+                     // Si l'admin ou déjà lancé lors de l'initialisation
+                    startRealtimeListener(userId);
+                }
+
+            } else {
+                document.getElementById('app-container').classList.add('opacity-0');
+                document.getElementById('launch-timer-overlay').classList.add('flex'); // Ajouter 'flex' pour centrer
+                document.getElementById('launch-timer-overlay').classList.remove('hidden');
+            }
+        };
+
+        const promptForPseudo = () => {
+            showCustomModal(
+                "BIENVENUE À LA SOIRÉE ! 🎉",
+                "Pour commencer à compter vos Jägerbombs, veuillez entrer votre pseudo de combat :",
+                'prompt',
+                (newPseudo) => {
+                    if (newPseudo) {
+                        // Utilise la fonction existante pour mettre à jour le pseudo et le document
+                        document.getElementById('pseudo-input').value = newPseudo;
+                        updatePseudo();
+                    } else {
+                        // Si annulé, utilise le pseudo par défaut
+                        updatePseudo();
+                    }
+                },
+                'Pseudo de légende...'
+            );
+        };
+        
+        // --- Références Firestore et Logique de Data (Inchangée) ---
 
         const COLLECTION_PATH = `/artifacts/${appId}/public/data/jagerbombs`;
         const userRef = (uid) => doc(db, COLLECTION_PATH, uid);
         const collectionRef = collection(db, COLLECTION_PATH);
 
-        // --- Variables d'État Locales ---
+        // --- Variables d'État Locales (Inchangée) ---
         let personalCount = 0;
         let userPseudo = 'Moi'; 
 
@@ -256,14 +471,14 @@
         
         loadPseudoFromCache();
         
-        // --- Fonctions de Mise à Jour de l'UI ---
+        // --- Fonctions de Mise à Jour de l'UI (Légèrement modifiée pour les modales) ---
 
         const updateMainUI = () => {
              // Si l'utilisateur est banni (document supprimé)
             if (isBanned) {
                 document.getElementById('banned-message').classList.remove('hidden');
                 document.getElementById('tracker-content').classList.add('hidden');
-                document.getElementById('admin-link-btn').classList.add('hidden'); // Cache le lien admin s'il est banni (même si admin)
+                document.getElementById('admin-link-btn').classList.add('hidden'); 
             } else {
                 document.getElementById('banned-message').classList.add('hidden');
                 document.getElementById('tracker-content').classList.remove('hidden');
@@ -313,7 +528,7 @@
             });
         };
 
-        // Rendu de la liste des utilisateurs pour la page Admin
+        // Rendu de la liste des utilisateurs pour la page Admin (Légèrement modifiée pour les modales)
         const renderAdminList = (data) => {
             const adminUserList = document.getElementById('admin-user-list');
             adminUserList.innerHTML = '';
@@ -335,8 +550,8 @@
                     <span class="w-1/4 text-center text-xl font-bold text-green-400">${user.count}</span>
                     <div class="w-1/4 text-right">
                         ${user.userId !== userId ? 
-                            `<button data-user-id="${user.userId}" class="ban-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded transition duration-150 shadow-md shadow-red-600/50">
-                                Bannir (Supprimer)
+                            `<button data-user-id="${user.userId}" data-pseudo="${user.pseudo || 'Anonyme'}" class="ban-btn bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-1 px-2 rounded transition duration-150 shadow-md shadow-red-600/50">
+                                Bannir
                             </button>` 
                         : ''}
                     </div>
@@ -348,16 +563,23 @@
             document.querySelectorAll('.ban-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const targetUserId = e.target.getAttribute('data-user-id');
-                    const pseudo = data.find(u => u.userId === targetUserId)?.pseudo || 'cet utilisateur';
-                    // NOTE: Utilisation d'alert/confirm pour les interfaces simples
-                    if (confirm(`Êtes-vous sûr de vouloir bannir ${pseudo} (ID: ${targetUserId}) ? Cette action est IRREVERSIBLE et supprime son compteur.`)) {
-                         banUser(targetUserId);
-                    }
+                    const pseudo = e.target.getAttribute('data-pseudo');
+
+                    showCustomModal(
+                        "Confirmation de Bannissement",
+                        `Êtes-vous sûr de vouloir bannir ${pseudo} (ID: ${targetUserId}) ? Cette action est IRREVERSIBLE et supprime son compteur.`,
+                        'confirm',
+                        (confirmed) => {
+                            if (confirmed) {
+                                banUser(targetUserId);
+                            }
+                        }
+                    );
                 });
             });
         };
 
-        // --- Logique Firestore ---
+        // --- Logique Firestore (Légèrement modifiée pour les modales) ---
 
         const startRealtimeListener = (currentUserId) => {
             const q = query(collectionRef);
@@ -380,24 +602,22 @@
                     }
                 });
                 
-                // Mettre à jour l'état de bannissement
                 isBanned = !userExists;
                 
                 if (currentUserData) {
                     personalCount = currentUserData.count || 0;
                     userPseudo = currentUserData.pseudo || 'Moi'; 
-                } else if (userExists) {
-                    // Si le doc n'existe pas mais qu'on a un ID, l'initialiser
+                } else if (!isBanned) {
+                    // Si le document a été initialement créé, mais qu'il manque des données pour une raison
                     initializeUserDocument(currentUserId, userPseudo); 
                 }
 
-                updateMainUI(); // Mise à jour de l'UI principale (y compris l'état banni)
+                updateMainUI(); 
                 updateGlobalUI(totalCount);
                 renderLeaderboard(leaderboardData);
 
-                // Mettre à jour la liste Admin si la page est affichée
                 if (document.getElementById('admin-page').classList.contains('hidden') === false) {
-                     renderAdminList(leaderboardData);
+                    renderAdminList(leaderboardData);
                 }
 
                 console.log(`Snapshot received. Global: ${totalCount}, Personal: ${personalCount}, Banned: ${isBanned}`);
@@ -408,33 +628,29 @@
             });
         };
 
-        // Fonction pour recréer le document (si banni)
         const rejoin = async () => {
             if (isBanned && userId) {
                  await initializeUserDocument(userId, userPseudo);
             }
         };
 
-        // Fonction de bannissement (suppression du document)
         const banUser = async (targetUserId) => {
              if (userId !== ADMIN_USER_ID) {
-                alert("Erreur: Vous n'avez pas les droits d'administrateur.");
+                showCustomModal("Accès Refusé", "Vous n'avez pas les droits d'administrateur.", 'alert');
                 return;
             }
             if (targetUserId === userId) {
-                alert("Erreur: Vous ne pouvez pas vous auto-bannir.");
+                showCustomModal("Action Impossible", "Vous ne pouvez pas vous auto-bannir.", 'alert');
                 return;
             }
             
             try {
-                // Suppression du document (ce qui le retire du classement)
                 await deleteDoc(userRef(targetUserId));
                 console.log(`ADMIN: Utilisateur ${targetUserId} banni (document supprimé).`);
-                alert("Utilisateur supprimé avec succès.");
+                showCustomModal("Succès", "Utilisateur supprimé avec succès.", 'alert');
             } catch (e) {
-                // Nécessite que l'admin ait la permission de delete sur tous les documents.
-                console.error("Erreur de bannissement (vérifiez les règles Firestore, besoin de 'delete' pour admin):", e);
-                alert("Erreur lors de la suppression. Veuillez vérifier vos règles Firestore (admin doit avoir 'delete').");
+                console.error("Erreur de bannissement (vérifiez les règles Firestore):", e);
+                showCustomModal("Erreur", "Erreur lors de la suppression. Veuillez vérifier vos règles Firestore (admin doit avoir 'delete').", 'alert');
             }
         };
 
@@ -455,52 +671,55 @@
         const updateCount = async (increment) => {
             if (!userId || isBanned) {
                 console.error("Action bloquée : non authentifié ou banni.");
-                alert("Veuillez vous réinscrire en cliquant sur 'Rejoindre la Soirée'.");
+                showCustomModal("Action Bloquée", "Veuillez vous réinscrire en cliquant sur 'Rejoindre la Soirée'.", 'alert');
                 return;
             }
+            if (!isLaunched && userId !== ADMIN_USER_ID) {
+                 showCustomModal("Pas Encore !", "Le compteur ne peut être utilisé qu'après le lancement officiel de la soirée.", 'alert');
+                 return;
+            }
+
 
             const newCount = personalCount + increment;
             const dataToUpdate = {
-                count: newCount,
+                count: newCount >= 0 ? newCount : 0,
                 lastUpdated: new Date()
             };
 
             try {
-                if (document.getElementById('pseudo-input').value !== userPseudo) {
-                    const newPseudo = document.getElementById('pseudo-input').value.trim() || 'Anonyme';
-                    dataToUpdate.pseudo = newPseudo;
-                    userPseudo = newPseudo; 
-                    savePseudoToCache(userPseudo); 
-                } else {
-                    dataToUpdate.pseudo = userPseudo;
-                }
-
-                if (dataToUpdate.count < 0) {
-                     dataToUpdate.count = 0;
-                }
+                // S'assurer que le pseudo est inclus
+                dataToUpdate.pseudo = document.getElementById('pseudo-input').value.trim() || userPseudo || 'Anonyme';
                 
-                personalCount = dataToUpdate.count;
-                updateMainUI();
-
                 await setDoc(userRef(userId), dataToUpdate, { merge: true });
                 console.log(`Compteur mis à jour: ${increment > 0 ? '+' : ''}${increment}`);
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du compteur:", e);
+                showCustomModal("Erreur Firestore", "Erreur lors de la mise à jour de votre score.", 'alert');
             }
         };
 
         const resetCount = async () => {
             if (!userId || isBanned) {
-                 alert("Veuillez vous réinscrire en cliquant sur 'Rejoindre la Soirée'.");
+                 showCustomModal("Action Bloquée", "Veuillez vous réinscrire en cliquant sur 'Rejoindre la Soirée'.", 'alert');
                  return;
             }
-
-            try {
-                await setDoc(userRef(userId), { count: 0, lastUpdated: new Date() }, { merge: true });
-                console.log("Compteur personnel réinitialisé à 0.");
-            } catch (e) {
-                console.error("Erreur lors de la réinitialisation du compteur:", e);
-            }
+            
+            showCustomModal(
+                "Confirmation de Réinitialisation",
+                "Êtes-vous sûr de vouloir réinitialiser votre compteur personnel à zéro ?",
+                'confirm',
+                async (confirmed) => {
+                    if (confirmed) {
+                        try {
+                            await setDoc(userRef(userId), { count: 0, lastUpdated: new Date() }, { merge: true });
+                            console.log("Compteur personnel réinitialisé à 0.");
+                        } catch (e) {
+                            console.error("Erreur lors de la réinitialisation du compteur:", e);
+                            showCustomModal("Erreur Firestore", "Erreur lors de la réinitialisation de votre score.", 'alert');
+                        }
+                    }
+                }
+            );
         };
         
         const updatePseudo = async () => {
@@ -526,51 +745,54 @@
                 console.log(`Pseudo mis à jour à: ${newPseudo}`);
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du pseudo:", e);
+                showCustomModal("Erreur Firestore", "Erreur lors de la mise à jour de votre pseudo.", 'alert');
             }
         };
 
-        // FONCTION ADMIN : RÉINITIALISATION GLOBALE (déjà présente)
         const resetAllCounts = async () => {
             if (userId !== ADMIN_USER_ID) {
-                alert("Erreur: Vous n'avez pas les droits d'administrateur pour cette opération.");
+                showCustomModal("Accès Refusé", "Vous n'avez pas les droits d'administrateur pour cette opération.", 'alert');
                 return;
             }
-
-            // NOTE: Utilisation d'alert/confirm pour les interfaces simples
-            if (!confirm("ATTENTION: Êtes-vous sûr de vouloir réinitialiser TOUS les compteurs ? Cette action est IRREVERSIBLE.")) {
-                 return;
-            }
             
-            document.getElementById('loading-indicator').classList.remove('hidden');
-            document.getElementById('loading-indicator').querySelector('p').textContent = 'Réinitialisation globale en cours...';
+            showCustomModal(
+                "🚨 DANGER ZONE : Réinitialisation Globale",
+                "ATTENTION: Êtes-vous sûr de vouloir réinitialiser TOUS les compteurs à 0 ? Cette action est IRREVERSIBLE.",
+                'confirm',
+                async (confirmed) => {
+                    if (confirmed) {
+                        document.getElementById('loading-indicator').classList.remove('hidden');
+                        document.getElementById('loading-indicator').querySelector('p').textContent = 'Réinitialisation globale en cours...';
 
-            try {
-                const snapshot = await getDocs(collectionRef);
-                let errorCount = 0;
-                let successCount = 0;
+                        try {
+                            const snapshot = await getDocs(collectionRef);
+                            let errorCount = 0;
+                            let successCount = 0;
 
-                for (const docSnapshot of snapshot.docs) {
-                    try {
-                        // Ceci nécessite la permission d'écriture de l'admin sur tous les documents
-                        await setDoc(doc(db, COLLECTION_PATH, docSnapshot.id), { 
-                            count: 0, 
-                            lastUpdated: new Date() 
-                        }, { merge: true });
-                        successCount++;
-                    } catch (e) {
-                        console.error(`ADMIN ÉCHEC : Erreur de permission pour réinitialiser le document ${docSnapshot.id}:`, e.message);
-                        errorCount++;
+                            for (const docSnapshot of snapshot.docs) {
+                                try {
+                                    await setDoc(doc(db, COLLECTION_PATH, docSnapshot.id), { 
+                                        count: 0, 
+                                        lastUpdated: new Date() 
+                                    }, { merge: true });
+                                    successCount++;
+                                } catch (e) {
+                                    console.error(`ADMIN ÉCHEC : Erreur de permission pour réinitialiser le document ${docSnapshot.id}:`, e.message);
+                                    errorCount++;
+                                }
+                            }
+
+                            document.getElementById('loading-indicator').classList.add('hidden');
+                            showCustomModal("Réinitialisation Terminée", `ADMIN: Réinitialisation terminée : ${successCount} réussites, ${errorCount} échecs.`, 'alert');
+                            
+                        } catch (e) {
+                            document.getElementById('loading-indicator').classList.add('hidden');
+                            console.error("Erreur critique lors de la réinitialisation globale:", e);
+                            showCustomModal("Erreur Critique", "Erreur critique lors de la réinitialisation globale. Voir console.", 'alert');
+                        }
                     }
                 }
-
-                document.getElementById('loading-indicator').classList.add('hidden');
-                alert(`ADMIN: Réinitialisation terminée : ${successCount} réussites, ${errorCount} échecs. (Vérifiez les règles)`);
-                
-            } catch (e) {
-                document.getElementById('loading-indicator').classList.add('hidden');
-                console.error("Erreur critique lors de la réinitialisation globale:", e);
-                alert("Erreur critique lors de la réinitialisation globale. Voir console.");
-            }
+            );
         };
 
         // --- Fonctions de navigation ---
@@ -579,7 +801,6 @@
                 document.getElementById('main-page').classList.add('hidden');
                 document.getElementById('admin-page').classList.remove('hidden');
                 document.getElementById('admin-link-btn').classList.add('hidden');
-                // Force le rafraîchissement de la liste admin avec les données existantes
                 startRealtimeListener(userId); 
             } else {
                 document.getElementById('main-page').classList.remove('hidden');
@@ -603,18 +824,13 @@
         document.getElementById('save-pseudo-btn').addEventListener('click', updatePseudo);
         document.getElementById('reset-count-btn').addEventListener('click', resetCount);
         
-        // Événement pour le bouton "Rejoindre la Soirée" après un banissement
         document.getElementById('rejoin-btn').addEventListener('click', rejoin);
 
-        // Événement sur la page admin (Réinitialisation globale)
         if (document.getElementById('reset-all-btn')) {
             document.getElementById('reset-all-btn').addEventListener('click', resetAllCounts);
         }
 
-        // NOUVEAU: Écouteurs pour la navigation Admin
-        // Cela résout le problème du 'onclick' qui ne fonctionne pas avec les modules ES sur mobile/Canvas.
         document.getElementById('admin-link-btn').addEventListener('click', () => showAdminPage(true));
-        // Ajout d'une vérification car le bouton de retour est sur la page cachée
         const backButton = document.getElementById('back-to-tracker-btn');
         if (backButton) {
             backButton.addEventListener('click', () => showAdminPage(false));
