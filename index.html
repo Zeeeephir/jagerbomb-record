@@ -180,6 +180,16 @@
                 
                 <p class="text-lg text-gray-300 mb-4">Votre ID Admin: <span id="admin-id-display" class="font-mono text-red-400 break-all"></span></p>
 
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <!-- NOUVEAU : Boutons de contrôle du timer -->
+                    <button id="launch-now-btn" class="bg-green-900 hover:bg-green-800 text-white font-bold py-2 px-4 rounded-lg transition duration-150 border border-green-700">
+                        Lancer la Soirée Maintenant
+                    </button>
+                    <button id="reset-timer-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg transition duration-150 border border-gray-700">
+                        Remettre le Compte à Rebours
+                    </button>
+                </div>
+
                 <button id="reset-all-btn" class="bg-red-900 hover:bg-red-800 text-white font-bold py-2 px-4 rounded-lg transition duration-150 border border-red-700">
                     Réinitialiser TOUS les Compteurs
                 </button>
@@ -404,15 +414,43 @@
             document.getElementById('seconds').textContent = seconds;
         };
 
+        // NOUVEAU: Fonction pour démarrer le tracker immédiatement (Admin)
+        const launchTrackerNow = () => {
+            if (userId !== ADMIN_USER_ID) return;
+            isLaunched = true;
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+            checkLaunchStatus(false);
+            showCustomModal("LANCEMENT FORCÉ", "La soirée a été lancée immédiatement par l'administrateur.", 'alert');
+        };
+
+        // NOUVEAU: Fonction pour réinitialiser le chrono (Admin)
+        const resetTrackerTimer = () => {
+            if (userId !== ADMIN_USER_ID) return;
+            isLaunched = false;
+            // Assurer que le listener n'est pas lancé tant que le chrono n'est pas écoulé
+            // (Le listener sera redémarré dans checkLaunchStatus si userId est ADMIN)
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
+            checkLaunchStatus(false);
+            showCustomModal("CHRONO RÉACTIVÉ", `Le compte à rebours a été réinitialisé jusqu'au ${new Date(LAUNCH_DATE).toLocaleTimeString()} le ${new Date(LAUNCH_DATE).toLocaleDateString()}.`, 'alert');
+        };
+
+
         const checkLaunchStatus = (justLaunched = false) => {
             if (isLaunched || userId === ADMIN_USER_ID) {
                 document.getElementById('launch-timer-overlay').classList.add('hidden');
-                document.getElementById('launch-timer-overlay').classList.remove('flex'); // S'assurer que 'flex' est retiré
+                document.getElementById('launch-timer-overlay').classList.remove('flex'); 
                 document.getElementById('app-container').classList.remove('opacity-0');
                 
                 // Si l'application vient d'être lancée (et que ce n'est pas l'admin)
                 if (justLaunched && userId !== ADMIN_USER_ID) {
-                    startRealtimeListener(userId); // Démarre l'écoute des données
+                    startRealtimeListener(userId); 
                     promptForPseudo(); // Demande le pseudo
                 } else if (!justLaunched && !countdownInterval) {
                      // Si l'admin ou déjà lancé lors de l'initialisation
@@ -571,7 +609,7 @@
                         'confirm',
                         (confirmed) => {
                             if (confirmed) {
-                                banUser(targetUserId);
+                                banUser(targetUserId, pseudo);
                             }
                         }
                     );
@@ -579,7 +617,7 @@
             });
         };
 
-        // --- Logique Firestore (Légèrement modifiée pour les modales) ---
+        // --- Logique Firestore (Légèrement modifiée pour les modales et correction admin) ---
 
         const startRealtimeListener = (currentUserId) => {
             const q = query(collectionRef);
@@ -634,7 +672,8 @@
             }
         };
 
-        const banUser = async (targetUserId) => {
+        // FIX ADMIN: Autorise l'admin à supprimer n'importe quel document sans vérification d'ID du doc
+        const banUser = async (targetUserId, pseudo) => {
              if (userId !== ADMIN_USER_ID) {
                 showCustomModal("Accès Refusé", "Vous n'avez pas les droits d'administrateur.", 'alert');
                 return;
@@ -645,12 +684,17 @@
             }
             
             try {
+                // Utiliser deleteDoc pour supprimer le document de l'utilisateur ciblé
                 await deleteDoc(userRef(targetUserId));
-                console.log(`ADMIN: Utilisateur ${targetUserId} banni (document supprimé).`);
-                showCustomModal("Succès", "Utilisateur supprimé avec succès.", 'alert');
+                console.log(`ADMIN: Utilisateur ${pseudo} (${targetUserId}) banni (document supprimé).`);
+                showCustomModal("Succès", `Le compteur de ${pseudo} a été supprimé du classement.`, 'alert');
             } catch (e) {
-                console.error("Erreur de bannissement (vérifiez les règles Firestore):", e);
-                showCustomModal("Erreur", "Erreur lors de la suppression. Veuillez vérifier vos règles Firestore (admin doit avoir 'delete').", 'alert');
+                console.error(`Erreur de bannissement de ${targetUserId} :`, e);
+                // Si l'erreur est une permission Denied, c'est que les règles Firestore n'autorisent pas 'delete' pour l'admin
+                const message = e.message.includes("PERMISSION_DENIED") 
+                    ? "Erreur Firestore: L'administrateur n'a pas la permission de SUPPRIMER ce document. Vérifiez les règles de sécurité."
+                    : "Erreur critique lors de la suppression.";
+                showCustomModal("Erreur", message, 'alert');
             }
         };
 
@@ -694,7 +738,7 @@
                 console.log(`Compteur mis à jour: ${increment > 0 ? '+' : ''}${increment}`);
             } catch (e) {
                 console.error("Erreur lors de la mise à jour du compteur:", e);
-                showCustomModal("Erreur Firestore", "Erreur lors de la mise à jour de votre score.", 'alert');
+                showCustomModal("Erreur Firestore", "Erreur lors de la mise à jour de votre score. (Vérifiez vos règles 'write').", 'alert');
             }
         };
 
@@ -749,6 +793,7 @@
             }
         };
 
+        // FIX ADMIN: Correction des erreurs Firestore potentielles pour l'admin
         const resetAllCounts = async () => {
             if (userId !== ADMIN_USER_ID) {
                 showCustomModal("Accès Refusé", "Vous n'avez pas les droits d'administrateur pour cette opération.", 'alert');
@@ -771,6 +816,7 @@
 
                             for (const docSnapshot of snapshot.docs) {
                                 try {
+                                    // Utiliser setDoc sur le doc de chaque utilisateur (Admin a besoin de droits 'write' globalement)
                                     await setDoc(doc(db, COLLECTION_PATH, docSnapshot.id), { 
                                         count: 0, 
                                         lastUpdated: new Date() 
@@ -783,12 +829,16 @@
                             }
 
                             document.getElementById('loading-indicator').classList.add('hidden');
-                            showCustomModal("Réinitialisation Terminée", `ADMIN: Réinitialisation terminée : ${successCount} réussites, ${errorCount} échecs.`, 'alert');
+                            if (errorCount > 0) {
+                                showCustomModal("Alerte Admin", `ADMIN: Réinitialisation terminée avec ${successCount} réussites et ${errorCount} échecs. Vérifiez que votre ID admin a la permission 'write' sur tous les documents dans les règles de sécurité Firestore.`, 'alert');
+                            } else {
+                                showCustomModal("Réinitialisation Terminée", `ADMIN: Réinitialisation de TOUS les compteurs réussie (${successCount} documents).`, 'alert');
+                            }
                             
                         } catch (e) {
                             document.getElementById('loading-indicator').classList.add('hidden');
                             console.error("Erreur critique lors de la réinitialisation globale:", e);
-                            showCustomModal("Erreur Critique", "Erreur critique lors de la réinitialisation globale. Voir console.", 'alert');
+                            showCustomModal("Erreur Critique", "Erreur critique lors de la réinitialisation globale. Voir console. (Problème de lecture/accès à la collection).", 'alert');
                         }
                     }
                 }
@@ -830,6 +880,14 @@
             document.getElementById('reset-all-btn').addEventListener('click', resetAllCounts);
         }
 
+        // NOUVEAU: Événements pour les boutons de contrôle du timer
+        if (document.getElementById('launch-now-btn')) {
+            document.getElementById('launch-now-btn').addEventListener('click', launchTrackerNow);
+        }
+        if (document.getElementById('reset-timer-btn')) {
+            document.getElementById('reset-timer-btn').addEventListener('click', resetTrackerTimer);
+        }
+
         document.getElementById('admin-link-btn').addEventListener('click', () => showAdminPage(true));
         const backButton = document.getElementById('back-to-tracker-btn');
         if (backButton) {
@@ -839,4 +897,3 @@
     </script>
 
 </body>
-</html>
